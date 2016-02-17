@@ -13,27 +13,33 @@ npm install toc-generator --save-dev
 ```javascript
 import tg from 'toc-generator';
 
-let toc = new tg.Toc(article, options);
+let toc = new tg.Toc(element, options);
+//let toc = tg.generate(element, options);
 /*
- article: optional, default is document.body
- options: optional, default is {
+ element: optional, default is document.body
+ options: optional, default is
+ {
     anchorIdPrefix: 'toc-',
+    maxDepth: 3,
  }
  */
  
 toc.placeAt(container, position);
 /*
  container: optional, default is document.body
- position: optional, validate value is one of ['before', 'after', 'replace', 'only', 'first', 'last'], default is 'last'
- */
- 
-toc.scrollTo('id');
-/*
- will scroll to anchor with the id 'id'
+ position: optional, validate value is one of
+ [
+    'before',
+    'after',
+    'replace',
+    'only',
+    'first',
+    'last'
+ ]
  */
  
 toc.destroy();
 /*
- will remove all anchors from article, and remove domNode of toc itself.
+ will remove all anchors from element, and remove domNode of toc itself.
  */
 ```
