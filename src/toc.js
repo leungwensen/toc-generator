@@ -4,6 +4,8 @@
 import declare from 'zero-oop/declare';
 import domConstruct from 'zero-dom/construct';
 import domQuery from 'zero-dom/query';
+import sprintf from 'zero-fmt/sprintf';
+import win from 'zero-lang/global';
 import {
     extend
 } from 'zero-lang/object';
@@ -20,13 +22,15 @@ const DEFAULT_OPTIONS = {
     maxDepth: 3
 };
 
+const body = win.document.body;
+
 let Toc = declare({
     constructor(element, options) {
         let self = this;
         if (element) {
             element = domQuery.one(element);
         }
-        self._srcElement = element || document.body;
+        self._srcElement = element || body;
         self._options = extend({}, DEFAULT_OPTIONS, options);
         self.parse()
             .bindEvents();
@@ -34,6 +38,7 @@ let Toc = declare({
     },
     parse() {
         let self = this;
+        self._outerDomNode = ''; // TODO
         return self;
     },
     bindEvents() {
@@ -53,6 +58,14 @@ let Toc = declare({
         return self;
     },
     placeAt(container, position) {
+        let self = this;
+        if (container) {
+            container = domQuery.one(container);
+        }
+        container = container || body;
+        position = position || '';
+        domConstruct.place(self._outerDomNode, container, position);
+        return self;
     },
     destroy() {
         let self = this;
