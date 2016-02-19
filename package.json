@@ -34,12 +34,14 @@
         "gulp-jscs": "^3.0.2",
         "gulp-util": "^3.0.7",
         "less-loader": "^2.2.2",
+        "marked-plus-renderer": "^0.0.20160216",
         "require-dir": "^0.3.0",
         "style-loader": "^0.13.0",
         "through2": "^2.0.0",
         "url-loader": "^0.5.7",
         "webpack": "^1.12.11",
-        "webpack-dev-server": "^1.14.1"
+        "webpack-dev-server": "^1.14.1",
+        "zero-net": "^0.0.20151202"
     },
     "scripts": {
     },
