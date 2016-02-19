@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>demo for toc-generator</title>
+    <link rel="stylesheet" href="../lib/marked-plus-renderer/libs.css">
+    <style>
+        .content {
+            background-color: #fff;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            margin: 30px auto;
+            max-width: 980px;
+            padding: 45px;
+            word-wrap: break-word;
+        }
+        .content figure, .content .mermaid, .content .flowchart-graph {
+            text-align: center;
+        }
+        .content.markdown-body table {
+            margin: 0 auto 16px;
+            display: table;
+            width: auto;
+        }
+        #toc ul {
+            list-style: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="markdown-body content">
+        <h1>toc-generator</h1>
+        <div id="toc"></div>
+    </div>
+    <div id="container" class="markdown-body content"></div>
+    <script src="../lib/marked-plus-renderer/libs.js"></script>
+    <script src="../lib/marked-plus-renderer/renderer.js"></script>
+    <script src="./index.js"></script>
+</body>
+</html>
