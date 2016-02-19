@@ -2,6 +2,7 @@
  * Created by liangwensen on 2/17/16.
  */
 
+import win from 'zero-lang/global';
 
 import Toc from './toc';
 import utils from './utils';
@@ -16,5 +17,7 @@ let main = extend({
         return new Toc(element, options);
     }
 }, utils);
+
+win.tg = win.tocGenerator = main;
 
 export default main;

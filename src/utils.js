@@ -3,29 +3,23 @@
  */
 
 import {
-    toInt
+    toInteger
 } from 'zero-lang/number';
 import sprintf from 'zero-fmt/sprintf';
 
-function getHeaderLevel(header) {
+export function getHeaderLevel(header) {
     let tagName = header.tagName;
-    return toInt(tagName.replace(/h/i, ''));
+    return toInteger(tagName.replace(/h/i, ''));
 }
 
-function getHeaderText(header) {
+export function getHeaderText(header) {
     return header.textContent || header.innerText || header.innerHTML;
 }
 
-function getHeaderSelector(level) {
+export function getHeaderSelector(level) {
     let headers = [];
     for (let i = 1; i <= level; i++) {
         headers.push(sprintf('h%d', i));
     }
     return headers.join(',');
-}
-
-export default {
-    getHeaderLevel,
-    getHeaderSelector,
-    getHeaderText
 }
