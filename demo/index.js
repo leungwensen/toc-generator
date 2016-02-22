@@ -46,19 +46,27 @@
 
 	'use strict';
 	
-	var _query = __webpack_require__(1);
+	var _event = __webpack_require__(1);
+	
+	var _event2 = _interopRequireDefault(_event);
+	
+	var _query = __webpack_require__(3);
 	
 	var _query2 = _interopRequireDefault(_query);
 	
-	var _fetch = __webpack_require__(7);
+	var _fetch = __webpack_require__(8);
 	
 	var _fetch2 = _interopRequireDefault(_fetch);
 	
-	var _global = __webpack_require__(14);
+	var _global = __webpack_require__(15);
 	
 	var _global2 = _interopRequireDefault(_global);
 	
-	var _index = __webpack_require__(19);
+	var _hashRouter = __webpack_require__(20);
+	
+	var _hashRouter2 = _interopRequireDefault(_hashRouter);
+	
+	var _index = __webpack_require__(25);
 	
 	var _index2 = _interopRequireDefault(_index);
 	
@@ -69,12 +77,24 @@
 	(0, _fetch2.default)('../lib/marked-plus-renderer/features.md').then(function (res) {
 	    return res.text();
 	}).then(function (markdownString) {
-	    console.log(markdownString);
 	    var containerElement = _query2.default.one('#container');
-	    console.log(mpr);
 	    mpr.render(containerElement, markdownString);
-	    var toc = new _index2.default.Toc(containerElement);
+	    var toc = new _index2.default.Toc(containerElement, {
+	        maxDepth: 6
+	    });
+	    toc.on('scrolled-to', function (headerMeta) {
+	        (0, _hashRouter2.default)(headerMeta.uniqueId);
+	    });
 	    toc.placeAt(_query2.default.one('#toc'));
+	    (0, _hashRouter2.default)({
+	        ':uniqueId': function uniqueId(_uniqueId) {
+	            toc.scrollTo(_uniqueId);
+	        }
+	    });
+	    _event2.default.on('#destroy-toc', 'click', function () {
+	        console.log('destroying toc instance');
+	        toc.destroy();
+	    });
 	});
 
 /***/ },
@@ -86,17 +106,229 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global document, window */
 	
-	var arrayUtils = __webpack_require__(2);
+	/*
+	 * @author: 绝云（wensen.lws）
+	 * @description: event firing
+	 * @reference: http://dean.edwards.name/weblog/2005/10/add-event/
+	 */
+	
+	var checkType = __webpack_require__(2);
+	var domQuery = __webpack_require__(3);
+	var domUtils = __webpack_require__(6);
+	
+	var doc = document;
+	var win = window;
+	
+	function addEvent(element, type, handler) {
+	    element = domQuery.one(element);
+	    if (element.addEventListener) {
+	        element.addEventListener(type, handler, false);
+	    } else {
+	        // assign each event handler a unique ID
+	        if (!handler.$$guid) {
+	            handler.$$guid = addEvent.guid++;
+	        }
+	        // create a hash table of event types for the element
+	        if (!element.events) {
+	            element.events = {};
+	        }
+	        // create a hash table of event handlers for each element/event pair
+	        var handlers = element.events[type];
+	        if (!handlers) {
+	            handlers = element.events[type] = {};
+	            // store the existing event handler (if there is one)
+	            if (element['on' + type]) {
+	                handlers[0] = element["on" + type];
+	            }
+	        }
+	        // store the event handler in the hash table
+	        handlers[handler.$$guid] = handler;
+	        // assign a global event handler to do all the work
+	        element['on' + type] = handleEvent;
+	    }
+	}
+	// a counter used to create unique IDs
+	addEvent.guid = 1;
+	
+	function removeEvent(element, type, handler) {
+	    var delegateWrapper = handler._delegateWrapper;
+	    element = domQuery.one(element);
+	    if (element.removeEventListener) {
+	        element.removeEventListener(type, handler, false);
+	        element.removeEventListener(type, delegateWrapper, false);
+	    } else {
+	        // delete the event handler from the hash table
+	        if (element.events && element.events[type]) {
+	            delete element.events[type][handler.$$guid];
+	            delete element.events[type][delegateWrapper.$$guid];
+	        }
+	    }
+	}
+	
+	function handleEvent(event) {
+	    /* jshint validthis:true */
+	    var returnValue = true;
+	    var elem = this;
+	    // grab the event object (IE uses a global event object)
+	    event = event || fixEvent((doc.parentWindow || win).event);
+	    // get a reference to the hash table of event handlers
+	    var handlers = elem.events[event.type];
+	    // execute each event handler
+	    for (var i in handlers) {
+	        elem.$$handleEvent = handlers[i];
+	        if (elem.$$handleEvent(event) === false) {
+	            returnValue = false;
+	        }
+	    }
+	    return returnValue;
+	}
+	
+	function fixEvent(event) {
+	    // add W3C standard event methods
+	    event.preventDefault = fixEvent.preventDefault;
+	    event.stopPropagation = fixEvent.stopPropagation;
+	    return event;
+	}
+	fixEvent.preventDefault = function () {
+	    this.returnValue = false;
+	};
+	fixEvent.stopPropagation = function () {
+	    this.cancelBubble = true;
+	};
+	
+	function delegate(element, type, selector, handler, capture, once) {
+	    if (checkType.isFunction(selector)) {
+	        addEvent(element, type, selector);
+	        return;
+	    }
+	    element = domQuery.one(element); // delegation is only for one element
+	    if (!domUtils.isDomNode(element)) {
+	        throw 'cannot bind events to non-elements: ' + element;
+	    }
+	    function wrapper(e) {
+	        // if this event has a delegateTarget, then we add it to the event
+	        // object (so that handlers may have a reference to the delegator
+	        // element) and fire the callback
+	        /*jshint -W084 */
+	        if (e.delegateTarget = _getDelegateTarget(element, e.target, selector)) {
+	            if (once === true) {
+	                removeEvent(element, type, wrapper);
+	            }
+	            handler.call(element, e);
+	        }
+	    }
+	    handler._delegateWrapper = wrapper;
+	    addEvent(element, type, wrapper, capture || false);
+	    return handler;
+	}
+	function _getDelegateTarget(element, target, selector) {
+	    while (target && target !== element) {
+	        if (domQuery.match(target, selector)) {
+	            return target;
+	        }
+	        target = target.parentElement;
+	    }
+	    return null;
+	}
+	
+	function once(element, type, selector, callback, capture) {
+	    delegate(element, type, selector, callback, capture, true);
+	}
+	
+	module.exports = {
+	    on: delegate,
+	    off: removeEvent,
+	    once: once
+	};
+
+/***/ },
+/* 2 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+	
+	/* jshint esnext: true, loopfunc: true */
+	
+	var toString = ({}).toString;
+	var isType = function isType(obj, type) {
+	    return toString.call(obj) === '[object ' + type + ']';
+	};
+	
+	var checkType = {
+	    isArguments: function isArguments(obj) {
+	        return isType(obj, 'Arguments');
+	    },
+	    isArray: Array.isArray ? Array.isArray : function (obj) {
+	        return isType(obj, 'Array');
+	    },
+	    isArrayLike: function isArrayLike(obj) {
+	        return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && isFinite(obj.length);
+	    },
+	    isBoolean: function isBoolean(obj) {
+	        return isType(obj, 'Boolean');
+	    },
+	    isDate: function isDate(obj) {
+	        return isType(obj, 'Date');
+	    },
+	    isError: function isError(obj) {
+	        return isType(obj, 'Error');
+	    },
+	    isFunction: function isFunction(obj) {
+	        return isType(obj, 'Function');
+	    },
+	    isNull: function isNull(obj) {
+	        return obj === null;
+	    },
+	    isNumber: function isNumber(obj) {
+	        return isType(obj, 'Number');
+	    },
+	    isPlainObject: function isPlainObject(obj) {
+	        return isType(obj, 'Object');
+	    },
+	    isRegExp: function isRegExp(obj) {
+	        return isType(obj, 'RegExp');
+	    },
+	    isString: function isString(obj) {
+	        return isType(obj, 'String');
+	    },
+	    isType: isType,
+	    isUndefined: function isUndefined(obj) {
+	        return obj === undefined;
+	    },
+	    getType: function getType(obj) {
+	        var typeStr = toString.call(obj);
+	        return typeStr.replace(/^\[object /, '').replace(/\]$/, '');
+	    },
+	    isObject: function isObject(obj) {
+	        var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
+	        return type === 'function' || type === 'object' && !!obj;
+	    }
+	};
+	
+	module.exports = checkType;
+
+/***/ },
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	/* global document, window */
+	
+	var arrayUtils = __webpack_require__(4);
 	var isArrayLike = arrayUtils.isArrayLike;
 	var contains = arrayUtils.contains;
 	var toArray = arrayUtils.toArray;
 	var some = arrayUtils.some;
 	var flatten = arrayUtils.flatten;
 	
-	var checkType = __webpack_require__(3);
+	var checkType = __webpack_require__(2);
 	var isString = checkType.isString;
 	
-	var domUtils = __webpack_require__(5);
+	var domUtils = __webpack_require__(6);
 	var testDiv = domUtils.testDiv;
 	var isDomNode = domUtils.isDomNode;
 	
@@ -200,7 +432,7 @@
 	};
 
 /***/ },
-/* 2 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -209,8 +441,8 @@
 	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var checkType = __webpack_require__(3);
-	var numberUtils = __webpack_require__(4);
+	var checkType = __webpack_require__(2);
+	var numberUtils = __webpack_require__(5);
 	
 	var isArray = checkType.isArray;
 	var AP = Array.prototype;
@@ -467,82 +699,14 @@
 	module.exports = arrayUtils;
 
 /***/ },
-/* 3 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-	
-	/* jshint esnext: true, loopfunc: true */
-	
-	var toString = ({}).toString;
-	var isType = function isType(obj, type) {
-	    return toString.call(obj) === '[object ' + type + ']';
-	};
-	
-	var checkType = {
-	    isArguments: function isArguments(obj) {
-	        return isType(obj, 'Arguments');
-	    },
-	    isArray: Array.isArray ? Array.isArray : function (obj) {
-	        return isType(obj, 'Array');
-	    },
-	    isArrayLike: function isArrayLike(obj) {
-	        return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && isFinite(obj.length);
-	    },
-	    isBoolean: function isBoolean(obj) {
-	        return isType(obj, 'Boolean');
-	    },
-	    isDate: function isDate(obj) {
-	        return isType(obj, 'Date');
-	    },
-	    isError: function isError(obj) {
-	        return isType(obj, 'Error');
-	    },
-	    isFunction: function isFunction(obj) {
-	        return isType(obj, 'Function');
-	    },
-	    isNull: function isNull(obj) {
-	        return obj === null;
-	    },
-	    isNumber: function isNumber(obj) {
-	        return isType(obj, 'Number');
-	    },
-	    isPlainObject: function isPlainObject(obj) {
-	        return isType(obj, 'Object');
-	    },
-	    isRegExp: function isRegExp(obj) {
-	        return isType(obj, 'RegExp');
-	    },
-	    isString: function isString(obj) {
-	        return isType(obj, 'String');
-	    },
-	    isType: isType,
-	    isUndefined: function isUndefined(obj) {
-	        return obj === undefined;
-	    },
-	    getType: function getType(obj) {
-	        var typeStr = toString.call(obj);
-	        return typeStr.replace(/^\[object /, '').replace(/\]$/, '');
-	    },
-	    isObject: function isObject(obj) {
-	        var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
-	        return type === 'function' || type === 'object' && !!obj;
-	    }
-	};
-	
-	module.exports = checkType;
-
-/***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var checkType = __webpack_require__(3);
+	var checkType = __webpack_require__(2);
 	
 	var isNumber = checkType.isNumber;
 	var nativeMin = Math.min;
@@ -595,7 +759,7 @@
 	module.exports = numberUtils;
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -605,7 +769,7 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global document, window */
 	
-	var stringUtils = __webpack_require__(6);
+	var stringUtils = __webpack_require__(7);
 	
 	var doc = document;
 	var html = doc.documentElement;
@@ -631,14 +795,14 @@
 	};
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var checkType = __webpack_require__(3);
+	var checkType = __webpack_require__(2);
 	
 	var isString = checkType.isString;
 	var stringPrototype = String.prototype;
@@ -675,7 +839,7 @@
 	module.exports = stringUtils;
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -684,9 +848,9 @@
 	/* global location */
 	// TODO reconstruct
 	
-	var Promise = __webpack_require__(8);
-	var json = __webpack_require__(16);
-	var xhr = __webpack_require__(18);
+	var Promise = __webpack_require__(9);
+	var json = __webpack_require__(17);
+	var xhr = __webpack_require__(19);
 	
 	/*
 	 * @author: 绝云（wensen.lws）
@@ -1040,7 +1204,7 @@
 	module.exports = window.fetch;
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(setImmediate, process) {'use strict';
@@ -1048,10 +1212,10 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global setImmediate, process, setTimeout */
 	
-	var arrayUtils = __webpack_require__(2);
-	var objectUtils = __webpack_require__(11);
-	var checkType = __webpack_require__(3);
-	var declare = __webpack_require__(12);
+	var arrayUtils = __webpack_require__(4);
+	var objectUtils = __webpack_require__(12);
+	var checkType = __webpack_require__(2);
+	var declare = __webpack_require__(13);
 	
 	var Resolver = declare({
 	    constructor: function constructor() {
@@ -1311,13 +1475,13 @@
 	// }
 	
 	module.exports = PromiseShim;
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9).setImmediate, __webpack_require__(10)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10).setImmediate, __webpack_require__(11)))
 
 /***/ },
-/* 9 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {var nextTick = __webpack_require__(10).nextTick;
+	/* WEBPACK VAR INJECTION */(function(setImmediate, clearImmediate) {var nextTick = __webpack_require__(11).nextTick;
 	var apply = Function.prototype.apply;
 	var slice = Array.prototype.slice;
 	var immediateIds = {};
@@ -1393,10 +1557,10 @@
 	exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
 	  delete immediateIds[id];
 	};
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9).setImmediate, __webpack_require__(9).clearImmediate))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10).setImmediate, __webpack_require__(10).clearImmediate))
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -1493,20 +1657,20 @@
 
 
 /***/ },
-/* 11 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	var checkType = __webpack_require__(3);
+	var checkType = __webpack_require__(2);
 	var getType = checkType.getType;
 	var isFunction = checkType.isFunction;
 	var isObject = checkType.isObject;
 	var isPlainObject = checkType.isPlainObject;
 	
-	var arrayUtils = __webpack_require__(2);
+	var arrayUtils = __webpack_require__(4);
 	var contains = arrayUtils.contains;
 	var each = arrayUtils.each;
 	var isArrayLike = arrayUtils.isArrayLike;
@@ -1620,15 +1784,15 @@
 	module.exports = objectUtils;
 
 /***/ },
-/* 12 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	var lang = __webpack_require__(13);
-	var c3mroMerge = __webpack_require__(15);
+	var lang = __webpack_require__(14);
+	var c3mroMerge = __webpack_require__(16);
 	
 	module.exports = function () /*name, superClasses, protoObj*/{
 	    var uberClass = undefined;
@@ -1681,21 +1845,21 @@
 	};
 
 /***/ },
-/* 13 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var objectUtils = __webpack_require__(11);
+	var objectUtils = __webpack_require__(12);
 	
 	module.exports = objectUtils.extend({
-	        global: __webpack_require__(14)
-	}, objectUtils, __webpack_require__(2), __webpack_require__(4), __webpack_require__(6), __webpack_require__(3));
+	        global: __webpack_require__(15)
+	}, objectUtils, __webpack_require__(4), __webpack_require__(5), __webpack_require__(7), __webpack_require__(2));
 
 /***/ },
-/* 14 */
+/* 15 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {'use strict';
@@ -1711,14 +1875,14 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 15 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	var arrayUtils = __webpack_require__(2);
+	var arrayUtils = __webpack_require__(4);
 	
 	function isGoodHead(head, rest) {
 	    var isGood = true;
@@ -1769,16 +1933,16 @@
 	};
 
 /***/ },
-/* 16 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	var arrayUtils = __webpack_require__(2);
-	var checkType = __webpack_require__(3);
-	var fmtDate = __webpack_require__(17);
+	var arrayUtils = __webpack_require__(4);
+	var checkType = __webpack_require__(2);
+	var fmtDate = __webpack_require__(18);
 	
 	var D2JSON = Date.prototype.toJSON;
 	
@@ -1896,14 +2060,14 @@
 	module.exports = json;
 
 /***/ },
-/* 17 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	var checkType = __webpack_require__(3);
+	var checkType = __webpack_require__(2);
 	
 	var doubleDigit = function doubleDigit(n) {
 	    return n < 10 ? '0' + n : n;
@@ -1940,7 +2104,7 @@
 	};
 
 /***/ },
-/* 18 */
+/* 19 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -1964,7 +2128,512 @@
 	module.exports = getXHR();
 
 /***/ },
-/* 19 */
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	/* global window */
+	// reference: https://github.com/jgallen23/routie/blob/master/lib/routie.js
+	
+	var HashRoute = __webpack_require__(21);
+	var checkType = __webpack_require__(2);
+	var objectUtils = __webpack_require__(12);
+	var arrayUtils = __webpack_require__(4);
+	var domEvent = __webpack_require__(22);
+	
+	var routes = [];
+	var map = {};
+	
+	function hashRouter(path, fn) {
+	    if (checkType.isFunction(fn)) {
+	        addHandler(path, fn);
+	        hashChanged();
+	    } else if (checkType.isObject(path)) {
+	        for (var p in path) {
+	            addHandler(p, path[p]);
+	        }
+	        hashChanged();
+	    } else if (checkType.isUndefined(fn)) {
+	        hashRouter.navigate(path);
+	    }
+	}
+	
+	function addHandler(path, fn) {
+	    var s = path.split(' ');
+	    var name = s.length == 2 ? s[0] : null;
+	    path = s.length == 2 ? s[1] : s[0];
+	
+	    if (!map[path]) {
+	        map[path] = new HashRoute(path, name);
+	        routes.push(map[path]);
+	    }
+	    map[path].addHandler(fn);
+	}
+	function getHash() {
+	    return window.location.hash.substring(1);
+	}
+	function checkRoute(hash, route) {
+	    var params = [];
+	    if (route.match(hash, params)) {
+	        route.apply(params);
+	        return true;
+	    }
+	    return false;
+	}
+	function hashChanged() {
+	    var hash = getHash();
+	    arrayUtils.some(routes, function (route) {
+	        return checkRoute(hash, route); // FIXME only match one route
+	    });
+	}
+	function clear() {
+	    map = {};
+	    routes = [];
+	}
+	function addListener() {
+	    domEvent.on(window, 'hashchange', hashChanged);
+	}
+	function removeListener() {
+	    domEvent.off(window, 'hashchange', hashChanged);
+	}
+	function navigate(path, options) {
+	    options = options || {};
+	    var silent = options.silent || false;
+	
+	    if (silent) {
+	        removeListener();
+	    }
+	    setTimeout(function () {
+	        window.location.hash = path;
+	        if (silent) {
+	            setTimeout(function () {
+	                addListener();
+	            }, 1);
+	        }
+	    }, 1);
+	}
+	
+	objectUtils.extend(hashRouter, {
+	    reload: hashChanged,
+	    lookup: function lookup(name, obj) {
+	        var result;
+	        arrayUtils.some(routes, function (route) {
+	            if (route.name === name) {
+	                result = route.toURL(obj);
+	                return true;
+	            }
+	        });
+	        return result;
+	    },
+	    remove: function remove(path, fn) {
+	        var route = map[path];
+	        if (!route) {
+	            return;
+	        }
+	        route.removeHandler(fn);
+	    },
+	    removeAll: clear,
+	    clear: clear,
+	    navigate: navigate,
+	    addListener: addListener,
+	    removeListener: removeListener
+	});
+	
+	addListener();
+	
+	module.exports = hashRouter;
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	///* global */
+	// reference: https://github.com/jgallen23/routie/blob/master/lib/routie.js
+	
+	var declare = __webpack_require__(13);
+	var checkType = __webpack_require__(2);
+	var arrayUtils = __webpack_require__(4);
+	
+	var Route = declare({
+	    constructor: function HashRoute(path, name) {
+	        var me = this;
+	        me.name = name;
+	        me.path = path;
+	        me.keys = [];
+	        me.handlers = [];
+	        me.params = {};
+	        me.regex = pathToRegexp(this.path, this.keys, false, false);
+	    },
+	    addHandler: function addHandler(fn) {
+	        this.handlers.push(fn);
+	    },
+	    removeHandler: function removeHandler(fn) {
+	        arrayUtils.remove(this.handlers, arrayUtils.indexOf(this.handlers, fn));
+	    },
+	    apply: function apply(params) {
+	        var me = this;
+	        var handlers = me.handlers;
+	        arrayUtils.each(handlers, function (fn) {
+	            fn.apply(me, params);
+	        });
+	    },
+	    match: function match(path, params) {
+	        var me = this;
+	        var m = me.regex.exec(path);
+	
+	        if (!m) return false;
+	
+	        for (var i = 1, len = m.length; i < len; ++i) {
+	            var key = me.keys[i - 1];
+	            var val = checkType.isString(m[i]) ? decodeURIComponent(m[i]) : m[i];
+	
+	            if (key) {
+	                me.params[key.name] = val;
+	            }
+	            params.push(val);
+	        }
+	
+	        return true;
+	    },
+	    toURL: function toURL(params) {
+	        var path = this.path;
+	        for (var param in params) {
+	            path = path.replace('/:' + param, '/' + params[param]);
+	        }
+	        path = path.replace(/\/:.*\?/g, '/').replace(/\?/g, '');
+	        if (path.indexOf(':') != -1) {
+	            throw new Error('missing parameters for url: ' + path);
+	        }
+	        return path;
+	    }
+	});
+	
+	function pathToRegexp(path, keys, sensitive, strict) {
+	    if (checkType.isRegExp(path)) {
+	        return path;
+	    }
+	    if (checkType.isArray(path)) {
+	        path = '(' + path.join('|') + ')';
+	    }
+	    path = path.concat(strict ? '' : '/?').replace(/\/\(/g, '(?:/').replace(/\+/g, '__plus__').replace(/(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, function (_, slash, format, key, capture, optional) {
+	        keys.push({ name: key, optional: !!optional });
+	        slash = slash || '';
+	        return '' + (optional ? '' : slash) + '(?:' + (optional ? slash : '') + (format || '') + (capture || format && '([^/.]+?)' || '([^/]+?)') + ')' + (optional || '');
+	    }).replace(/([\/.])/g, '\\$1').replace(/__plus__/g, '(.+)').replace(/\*/g, '(.*)');
+	    return new RegExp('^' + path + '$', sensitive ? '' : 'i');
+	}
+	
+	module.exports = Route;
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	/* global document, window */
+	
+	/*
+	 * @author: 绝云（wensen.lws）
+	 * @description: event firing
+	 * @reference: http://dean.edwards.name/weblog/2005/10/add-event/
+	 */
+	
+	var checkType = __webpack_require__(2);
+	var domQuery = __webpack_require__(23);
+	var domUtils = __webpack_require__(24);
+	
+	var doc = document;
+	var win = window;
+	
+	function addEvent(element, type, handler) {
+	    element = domQuery.one(element);
+	    if (element.addEventListener) {
+	        element.addEventListener(type, handler, false);
+	    } else {
+	        // assign each event handler a unique ID
+	        if (!handler.$$guid) {
+	            handler.$$guid = addEvent.guid++;
+	        }
+	        // create a hash table of event types for the element
+	        if (!element.events) {
+	            element.events = {};
+	        }
+	        // create a hash table of event handlers for each element/event pair
+	        var handlers = element.events[type];
+	        if (!handlers) {
+	            handlers = element.events[type] = {};
+	            // store the existing event handler (if there is one)
+	            if (element['on' + type]) {
+	                handlers[0] = element["on" + type];
+	            }
+	        }
+	        // store the event handler in the hash table
+	        handlers[handler.$$guid] = handler;
+	        // assign a global event handler to do all the work
+	        element['on' + type] = handleEvent;
+	    }
+	}
+	// a counter used to create unique IDs
+	addEvent.guid = 1;
+	
+	function removeEvent(element, type, handler) {
+	    var delegateWrapper = handler._delegateWrapper;
+	    element = domQuery.one(element);
+	    if (element.removeEventListener) {
+	        element.removeEventListener(type, handler, false);
+	        element.removeEventListener(type, delegateWrapper, false);
+	    } else {
+	        // delete the event handler from the hash table
+	        if (element.events && element.events[type]) {
+	            delete element.events[type][handler.$$guid];
+	            delete element.events[type][delegateWrapper.$$guid];
+	        }
+	    }
+	}
+	
+	function handleEvent(event) {
+	    /* jshint validthis:true */
+	    var returnValue = true;
+	    var elem = this;
+	    // grab the event object (IE uses a global event object)
+	    event = event || fixEvent((doc.parentWindow || win).event);
+	    // get a reference to the hash table of event handlers
+	    var handlers = elem.events[event.type];
+	    // execute each event handler
+	    for (var i in handlers) {
+	        elem.$$handleEvent = handlers[i];
+	        if (elem.$$handleEvent(event) === false) {
+	            returnValue = false;
+	        }
+	    }
+	    return returnValue;
+	}
+	
+	function fixEvent(event) {
+	    // add W3C standard event methods
+	    event.preventDefault = fixEvent.preventDefault;
+	    event.stopPropagation = fixEvent.stopPropagation;
+	    return event;
+	}
+	fixEvent.preventDefault = function () {
+	    this.returnValue = false;
+	};
+	fixEvent.stopPropagation = function () {
+	    this.cancelBubble = true;
+	};
+	
+	function delegate(element, type, selector, handler, capture, once) {
+	    if (checkType.isFunction(selector)) {
+	        addEvent(element, type, selector);
+	        return;
+	    }
+	    element = domQuery.one(element); // delegation is only for one element
+	    if (!domUtils.isDomNode(element)) {
+	        throw 'cannot bind events to non-elements: ' + element;
+	    }
+	    function wrapper(e) {
+	        // if this event has a delegateTarget, then we add it to the event
+	        // object (so that handlers may have a reference to the delegator
+	        // element) and fire the callback
+	        /*jshint -W084 */
+	        if (e.delegateTarget = _getDelegateTarget(element, e.target, selector)) {
+	            if (once === true) {
+	                removeEvent(element, type, wrapper);
+	            }
+	            handler.call(element, e);
+	        }
+	    }
+	    handler._delegateWrapper = wrapper;
+	    addEvent(element, type, wrapper, capture || false);
+	    return handler;
+	}
+	function _getDelegateTarget(element, target, selector) {
+	    while (target && target !== element) {
+	        if (domQuery.match(target, selector)) {
+	            return target;
+	        }
+	        target = target.parentElement;
+	    }
+	    return null;
+	}
+	
+	function once(element, type, selector, callback, capture) {
+	    delegate(element, type, selector, callback, capture, true);
+	}
+	
+	module.exports = {
+	    on: delegate,
+	    off: removeEvent,
+	    once: once
+	};
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	/* global document, window */
+	
+	var arrayUtils = __webpack_require__(4);
+	var isArrayLike = arrayUtils.isArrayLike;
+	var contains = arrayUtils.contains;
+	var toArray = arrayUtils.toArray;
+	var some = arrayUtils.some;
+	var flatten = arrayUtils.flatten;
+	
+	var checkType = __webpack_require__(2);
+	var isString = checkType.isString;
+	
+	var domUtils = __webpack_require__(24);
+	var testDiv = domUtils.testDiv;
+	var isDomNode = domUtils.isDomNode;
+	
+	/*
+	 * @author      : 绝云（wensen.lws）
+	 * @description : selector
+	 * @note        : browser only
+	 * @note        : MODERN browsers only
+	 */
+	
+	var doc = document;
+	var win = window;
+	var nodeTypeStr = 'nodeType';
+	var re_quick = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/; // 匹配快速选择器
+	var matchesSelector = testDiv.matches || testDiv.webkitMatchesSelector || testDiv.mozMatchesSelector || testDiv.msMatchesSelector || testDiv.oMatchesSelector;
+	var hasMatchesSelector = matchesSelector && matchesSelector.call(testDiv, 'div');
+	
+	function normalizeRoot(root) {
+	    if (!root) {
+	        return doc;
+	    }
+	    if (isString(root)) {
+	        return query(root)[0];
+	    }
+	    if (!root[nodeTypeStr] && isArrayLike(root)) {
+	        return root[0];
+	    }
+	    return root;
+	}
+	function query(selector, optRoot) {
+	    /*
+	     * description: 选择器
+	     */
+	    var root = normalizeRoot(optRoot);
+	    var match = undefined;
+	
+	    if (!root || !selector) {
+	        return [];
+	    }
+	    if (selector === win || isDomNode(selector)) {
+	        return !optRoot || selector !== win && isDomNode(root) && contains(selector, root) ? [selector] : [];
+	    }
+	    if (selector.nodeType === 11) {
+	        // document fragment
+	        return toArray(selector.childNodes);
+	    }
+	    if (selector && isArrayLike(selector)) {
+	        return flatten(selector);
+	    }
+	
+	    // 简单查询使用快速查询方法 {
+	    if (isString(selector) && (match = re_quick.exec(selector))) {
+	        if (match[1]) {
+	            return [root.getElementById(match[1])];
+	        } else if (match[2]) {
+	            return toArray(root.getElementsByTagName(match[2]));
+	        } else if (match[3]) {
+	            return toArray(root.getElementsByClassName(match[3]));
+	        }
+	    }
+	    // }
+	    if (selector && (selector.document || selector[nodeTypeStr] && selector[nodeTypeStr] === 9)) {
+	        return !optRoot ? [selector] : [];
+	    }
+	    return toArray(root.querySelectorAll(selector));
+	}
+	function queryOne(selector, optRoot) {
+	    return query(selector, optRoot)[0];
+	}
+	
+	function match(element, selector) {
+	    /*
+	     * @matches selector
+	     */
+	    if (hasMatchesSelector) {
+	        return matchesSelector.call(element, selector);
+	    }
+	    var parentElem = element.parentNode;
+	    var nodes = undefined;
+	
+	    // if the element is an orphan, and the browser doesn't support matching
+	    // orphans, append it to a documentFragment
+	    if (!parentElem && !hasMatchesSelector) {
+	        parentElem = document.createDocumentFragment();
+	        parentElem.appendChild(element);
+	    }
+	    // from the parent element's context, get all nodes that match the selector
+	    nodes = query(selector, parentElem);
+	
+	    // since support for `matches()` is missing, we need to check to see if
+	    // any of the nodes returned by our query match the given element
+	    return some(nodes, function (node) {
+	        return node === element;
+	    });
+	}
+	
+	module.exports = {
+	    all: query,
+	    one: queryOne,
+	    match: match
+	};
+
+/***/ },
+/* 24 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	/* global document, window */
+	
+	var stringUtils = __webpack_require__(7);
+	
+	var doc = document;
+	var html = doc.documentElement;
+	var testDiv = doc.createElement('div');
+	
+	module.exports = {
+	    hasTextContent: 'textContent' in testDiv,
+	    hasClassList: 'classList' in testDiv,
+	    hasDataSet: 'dataset' in testDiv,
+	    canDnD: 'draggable' in testDiv,
+	    isQuirks: stringUtils.lc(doc.compatMode) === 'backcompat' || doc.documentMode === 5, // 怪异模式
+	    testDiv: testDiv,
+	    contains: 'compareDocumentPosition' in html ? function (element, container) {
+	        return (container.compareDocumentPosition(element) & 16) === 16;
+	    } : function (element, container) {
+	        container = container === doc || container === window ? html : container;
+	        return container !== element && container.contains(element);
+	    },
+	    isDomNode: function isDomNode(element) {
+	        var t = element.nodeType;
+	        return element && (typeof element === 'undefined' ? 'undefined' : _typeof(element)) === 'object' && (t === 1 || t === 9);
+	    }
+	};
+
+/***/ },
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1973,25 +2642,27 @@
 	    value: true
 	});
 	
-	var _global = __webpack_require__(14);
+	var _global = __webpack_require__(15);
 	
 	var _global2 = _interopRequireDefault(_global);
 	
-	var _toc = __webpack_require__(20);
+	var _toc = __webpack_require__(26);
 	
 	var _toc2 = _interopRequireDefault(_toc);
 	
-	var _utils = __webpack_require__(26);
+	var _utils = __webpack_require__(35);
 	
 	var _utils2 = _interopRequireDefault(_utils);
 	
-	var _object = __webpack_require__(11);
+	var _object = __webpack_require__(12);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	/**
 	 * Created by liangwensen on 2/17/16.
 	 */
+	
+	__webpack_require__(40);
 	
 	var main = (0, _object.extend)({
 	    Toc: _toc2.default,
@@ -2005,7 +2676,7 @@
 	exports.default = main;
 
 /***/ },
-/* 20 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2014,103 +2685,153 @@
 	    value: true
 	});
 	
-	var _declare = __webpack_require__(12);
+	var _event = __webpack_require__(27);
+	
+	var _event2 = _interopRequireDefault(_event);
+	
+	var _declare = __webpack_require__(13);
 	
 	var _declare2 = _interopRequireDefault(_declare);
 	
-	var _class = __webpack_require__(21);
+	var _class = __webpack_require__(28);
 	
 	var _class2 = _interopRequireDefault(_class);
 	
-	var _construct = __webpack_require__(22);
+	var _construct = __webpack_require__(29);
 	
 	var _construct2 = _interopRequireDefault(_construct);
 	
-	var _query = __webpack_require__(1);
+	var _data = __webpack_require__(31);
+	
+	var _data2 = _interopRequireDefault(_data);
+	
+	var _event3 = __webpack_require__(1);
+	
+	var _event4 = _interopRequireDefault(_event3);
+	
+	var _query = __webpack_require__(3);
 	
 	var _query2 = _interopRequireDefault(_query);
 	
-	var _sprintf = __webpack_require__(24);
+	var _style = __webpack_require__(32);
+	
+	var _style2 = _interopRequireDefault(_style);
+	
+	var _sprintf = __webpack_require__(33);
 	
 	var _sprintf2 = _interopRequireDefault(_sprintf);
 	
-	var _zeroLang = __webpack_require__(13);
+	var _zeroLang = __webpack_require__(14);
 	
 	var _zeroLang2 = _interopRequireDefault(_zeroLang);
 	
-	var _html = __webpack_require__(25);
+	var _html = __webpack_require__(34);
 	
 	var _html2 = _interopRequireDefault(_html);
 	
-	var _utils = __webpack_require__(26);
+	var _utils = __webpack_require__(35);
 	
-	var _anchor = __webpack_require__(27);
+	var _anchor = __webpack_require__(36);
 	
 	var _anchor2 = _interopRequireDefault(_anchor);
 	
-	var _link = __webpack_require__(28);
+	var _expander = __webpack_require__(37);
+	
+	var _expander2 = _interopRequireDefault(_expander);
+	
+	var _link = __webpack_require__(38);
 	
 	var _link2 = _interopRequireDefault(_link);
 	
-	var _linkList = __webpack_require__(29);
+	var _linkList = __webpack_require__(39);
 	
 	var _linkList2 = _interopRequireDefault(_linkList);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
+	/**
+	 * Created by liangwensen on 2/17/16.
+	 */
+	
+	
 	var DEFAULT_OPTIONS = {
 	    anchorIdPrefix: 'toc-',
+	    expanderClassName: 'link-expander',
+	    expanderExpandedText: '&blacktriangledown;',
+	    expanderText: '&blacktriangleright;',
 	    hasChildClassName: 'has-child',
 	    maxDepth: 3,
+	    textClassName: 'link-text',
 	    uniqueIdSeparator: '-',
 	    uniqueIdSuffix: '1'
-	}; /**
-	    * Created by liangwensen on 2/17/16.
-	    */
-	
+	};
 	
 	var extend = _zeroLang2.default.extend;
 	var body = document.body;
 	var templateHelper = extend({}, _html2.default, _zeroLang2.default);
 	
+	function addHeaderExpander(header, options) {
+	    if (!header._expanderElement) {
+	        _construct2.default.place((0, _expander2.default)({
+	            uniqueId: header.uniqueId,
+	            className: options.expanderClassName
+	        }), header.element, 'first');
+	        header._expanderElement = _query2.default.one('.' + options.expanderClassName, header.element);
+	    }
+	}
+	
+	function toggleHeaderExpanderText(header, options, isExpanded) {
+	    header._expanderElement.innerHTML = isExpanded ? options.expanderExpandedText : options.expanderText;
+	}
+	
+	function locationCallback(e) {
+	    var delegateTarget = e.delegateTarget;
+	    var uniqueId = _data2.default.get(delegateTarget, 'unique');
+	    _zeroLang2.default.global.location = '#' + uniqueId;
+	}
+	
 	var Toc = (0, _declare2.default)({
 	    constructor: function constructor(element, options) {
-	        var self = this;
+	        var me = this;
 	        if (element) {
 	            element = _query2.default.one(element);
 	        }
-	        self._srcElement = element || body;
-	        self._options = extend({}, DEFAULT_OPTIONS, options);
-	        self._parse()._bindEvents();
-	        return self;
+	        (0, _event2.default)(me);
+	        me._srcElement = element || body;
+	        me._options = extend({}, DEFAULT_OPTIONS, options);
+	        me._parse()._bindEvents();
+	        return me;
 	    },
 	    _parse: function _parse() {
-	        var self = this;
-	        var options = self._options;
-	        var tocElement = self._outerDomNode = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
+	        var me = this;
+	        var options = me._options;
+	        var tocElement = me._outerDomNode = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
 	
-	        var headers = _query2.default.all((0, _utils.getHeaderSelector)(options.maxDepth), self._srcElement);
+	        var headers = _query2.default.all((0, _utils.getHeaderSelector)(options.maxDepth), me._srcElement);
 	        var currentHeaderMeta = undefined;
 	        var headerMetaById = {};
 	
 	        function getHeaderUniqueId(text) {
-	            var id = text.replace(/\s+/, options.uniqueIdSeparator);
+	            var id = text.replace(/\s+/g, options.uniqueIdSeparator).replace(/\\/g, options.uniqueIdSeparator).replace(/\//g, options.uniqueIdSeparator);
 	            if (!_zeroLang2.default.hasKey(headerMetaById, id)) {
 	                return id;
 	            }
+	
 	            return getHeaderUniqueId(id + options.uniqueIdSuffix);
 	        }
 	
 	        function addToChildren(headerMeta, parentHeaderMeta) {
-	            console.log(arguments);
 	            var childrenElement = _query2.default.one('ul', parentHeaderMeta.element);
 	            if (!childrenElement) {
 	                childrenElement = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
 	                _construct2.default.place(childrenElement, parentHeaderMeta.element);
 	            }
+	
 	            _construct2.default.place(headerMeta.element, childrenElement);
-	            parentHeaderMeta.hasChild = true;
 	            headerMeta.parentId = parentHeaderMeta.uniqueId;
+	            parentHeaderMeta.children.push(headerMeta.uniqueId);
+	            parentHeaderMeta.childrenElement = childrenElement;
+	            addHeaderExpander(parentHeaderMeta, options);
 	        }
 	
 	        _zeroLang2.default.each(headers, function (header) {
@@ -2121,7 +2842,10 @@
 	                text: text,
 	                uniqueId: uniqueId,
 	                level: level,
-	                hasChild: false
+	                isExpanded: true,
+	                expanderClassName: options.expanderClassName,
+	                textClassName: options.textClassName,
+	                children: []
 	            };
 	            var linkElement = _construct2.default.toDom((0, _link2.default)(meta, templateHelper));
 	            var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, templateHelper));
@@ -2143,6 +2867,7 @@
 	                            break;
 	                        }
 	                    }
+	
 	                    if (parentMeta) {
 	                        addToChildren(meta, parentMeta);
 	                    } else {
@@ -2152,55 +2877,192 @@
 	            } else {
 	                _construct2.default.place(linkElement, tocElement);
 	            }
+	
 	            headerMetaById[uniqueId] = meta;
 	            currentHeaderMeta = meta;
 	        });
+	
 	        _zeroLang2.default.forIn(headerMetaById, function (meta) {
-	            if (meta.hasChild) {
+	            if (meta.children.length) {
 	                _class2.default.add(meta.element, options.hasChildClassName);
 	            }
 	        });
 	
-	        self._headerMetaById = headerMetaById;
-	        return self;
+	        me._headerMetaById = headerMetaById;
+	        return me;
 	    },
 	    _bindEvents: function _bindEvents() {
-	        var self = this;
-	        return self;
+	        var me = this;
+	        var options = me._options;
+	        _event4.default.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
+	            var delegateTarget = e.delegateTarget;
+	            var uniqueId = _data2.default.get(delegateTarget, 'unique');
+	            me.expandOrCollapse(uniqueId);
+	        });
+	
+	        _event4.default.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
+	            var delegateTarget = e.delegateTarget;
+	            var uniqueId = _data2.default.get(delegateTarget, 'unique');
+	            me.scrollTo(uniqueId);
+	            me.trigger('scrolled-to', me._headerMetaById[uniqueId]);
+	        });
+	
+	        _event4.default.on(me._srcElement, 'click', '.toc-anchor', locationCallback);
+	
+	        return me;
+	    },
+	    _unbindEvents: function _unbindEvents() {
+	        var me = this;
+	        _event4.default.off(me._srcElement, 'click', locationCallback);
+	        return me;
+	    },
+	    expand: function expand(id) {
+	        var me = this;
+	        var header = me._headerMetaById[id];
+	        if (header && header.childrenElement) {
+	            _style2.default.show(header.childrenElement);
+	            toggleHeaderExpanderText(header, me._options, true);
+	            header.isExpanded = true;
+	        }
+	
+	        return me;
+	    },
+	    collapse: function collapse(id) {
+	        var me = this;
+	        var header = me._headerMetaById[id];
+	        if (header && header.childrenElement) {
+	            _style2.default.hide(header.childrenElement);
+	            toggleHeaderExpanderText(header, me._options);
+	            header.isExpanded = false;
+	        }
+	
+	        return me;
+	    },
+	    expandOrCollapse: function expandOrCollapse(id) {
+	        var me = this;
+	        var header = me._headerMetaById[id];
+	        if (header) {
+	            me[header.isExpanded ? 'collapse' : 'expand'](id);
+	        }
+	
+	        return me;
 	    },
 	    scrollTo: function scrollTo(uniqueId) {
-	        var self = this;
+	        var me = this;
 	        var anchorSelector = (0, _sprintf2.default)('[data-unique="%s"]', uniqueId);
 	        try {
-	            var anchorNode = _query2.default.one(anchorSelector, self._srcElement);
+	            var anchorNode = _query2.default.one(anchorSelector, me._srcElement);
 	            if (anchorNode) {
 	                anchorNode.scrollIntoView(true);
 	            }
 	        } catch (e) {}
-	        return self;
+	
+	        return me;
 	    },
 	    placeAt: function placeAt(container, position) {
-	        var self = this;
+	        var me = this;
 	        if (container) {
 	            container = _query2.default.one(container);
 	        }
+	
 	        container = container || body;
 	        position = position || '';
-	        _construct2.default.place(self._outerDomNode, container, position);
-	        return self;
+	        _construct2.default.place(me._outerDomNode, container, position);
+	        return me;
 	    },
 	    destroy: function destroy() {
-	        var self = this;
-	        // remove all dom nodes
+	        var me = this;
+	        var options = me._options;
+	
 	        // unbind all events
-	        return self;
+	        me._unbindEvents();
+	
+	        // remove all dom nodes
+	        _zeroLang2.default.each(_query2.default.all('.toc-anchor', me._srcElement), function (anchor) {
+	            _construct2.default.destroy(anchor);
+	        });
+	        _construct2.default.destroy(me._outerDomNode);
+	        return me;
 	    }
 	});
 	
 	exports.default = Toc;
 
 /***/ },
-/* 21 */
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	
+	// TODO NEED to strengthen
+	
+	var arrayUtils = __webpack_require__(4);
+	
+	var event = function event(target) {
+	    // if target not defined, it is a global event
+	    target = target || this;
+	
+	    // all events stores in the the collection: *._events
+	    var events = target._events = {};
+	
+	    target.on = function (name, callback, context) {
+	        /*
+	         * @description: 绑定事件
+	         */
+	        var list = events[name] || (events[name] = []);
+	        list.push({
+	            callback: callback,
+	            context: context
+	        });
+	        return target;
+	    };
+	    target.off = function (name, callback) {
+	        /*
+	         * @description: 解绑事件
+	         */
+	        if (!name) {
+	            events = {};
+	            return target;
+	        }
+	        var list = events[name] || [];
+	        var i = list.length;
+	        if (!callback) {
+	            list = [];
+	        } else {
+	            while (i > 0) {
+	                i--;
+	                if (list[i].callback === callback) {
+	                    list.splice(i, 1);
+	                }
+	            }
+	        }
+	        events[name] = list;
+	        return target;
+	    };
+	    target.emit = function () {
+	        /*
+	         * @description: 触发事件
+	         */
+	        var args = arrayUtils.toArray(arguments);
+	        var list = events[args.shift()] || [];
+	        arrayUtils.each(list, function (evt) {
+	            if (!evt.callback) {
+	                throw 'event callback is not defined';
+	            }
+	            evt.callback.apply(evt.context, args);
+	        });
+	        return target;
+	    };
+	    target.trigger = target.emit; // alias
+	    return target;
+	};
+	
+	module.exports = event;
+
+/***/ },
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2213,10 +3075,10 @@
 	 * @note: if ClassList is supported, use ClassList
 	 */
 	
-	var domQuery = __webpack_require__(1);
-	var domUtils = __webpack_require__(5);
-	var arrayUtils = __webpack_require__(2);
-	var stringUtils = __webpack_require__(6);
+	var domQuery = __webpack_require__(3);
+	var domUtils = __webpack_require__(6);
+	var arrayUtils = __webpack_require__(4);
+	var stringUtils = __webpack_require__(7);
 	
 	var RE_spaces = /\s+/;
 	var className = 'className';
@@ -2327,7 +3189,7 @@
 	module.exports = domClass;
 
 /***/ },
-/* 22 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2341,13 +3203,13 @@
 	 * @reference   : https://github.com/dojo/dojo/blob/master/dom-construct.js
 	 */
 	
-	var bomUtils = __webpack_require__(23);
-	var arrayUtils = __webpack_require__(2);
-	var objectUtils = __webpack_require__(11);
-	var stringUtils = __webpack_require__(6);
-	var checkType = __webpack_require__(3);
+	var bomUtils = __webpack_require__(30);
+	var arrayUtils = __webpack_require__(4);
+	var objectUtils = __webpack_require__(12);
+	var stringUtils = __webpack_require__(7);
+	var checkType = __webpack_require__(2);
 	
-	var domQuery = __webpack_require__(1);
+	var domQuery = __webpack_require__(3);
 	
 	var queryOne = domQuery.one;
 	var win = window;
@@ -2518,9 +3380,8 @@
 	
 	module.exports = domConstruct;
 
-
 /***/ },
-/* 23 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2528,7 +3389,7 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global window, location, navigator, ActiveXObject */
 	
-	var lang = __webpack_require__(13);
+	var lang = __webpack_require__(14);
 	
 	/*
 	 * @author      : 绝云 (wensen.lws@alibaba-inc.com)
@@ -2669,14 +3530,364 @@
 	};
 
 /***/ },
-/* 24 */
+/* 31 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	///* global */
+	
+	var domUtils = __webpack_require__(6);
+	var domQuery = __webpack_require__(3);
+	
+	var queryOne = domQuery.one;
+	
+	/*
+	 * @author: 绝云（wensen.lws）
+	 * @description: dom dataSet related
+	 * @note: if DataSet is supported, use DataSet
+	 */
+	
+	var dataSetStr = 'dataset';
+	var dataPrefix = 'data-';
+	
+	function toDashed(name) {
+	    return name.replace(/([A-Z])/g, function (u) {
+	        return '-' + u.toLowerCase();
+	    });
+	}
+	
+	var dataset = domUtils.hasDataSet ? {
+	    set: function set(node, attr, value) {
+	        node = queryOne(node);
+	        node[dataSetStr][attr] = value;
+	    },
+	    get: function get(node, attr) {
+	        node = queryOne(node);
+	        return node[dataSetStr][attr];
+	    },
+	    remove: function remove(node, attr) {
+	        node = queryOne(node);
+	        delete node[dataSetStr][attr];
+	    }
+	} : {
+	    set: function set(node, attr, value) {
+	        node = queryOne(node);
+	        node.setAttribute(dataPrefix + toDashed(attr), value);
+	    },
+	    get: function get(node, attr) {
+	        node = queryOne(node);
+	        return node.getAttribute(dataPrefix + toDashed(attr));
+	    },
+	    remove: function remove(node, attr) {
+	        node = queryOne(node);
+	        node.removeAttribute(dataPrefix + toDashed(attr));
+	    }
+	
+	};
+	
+	module.exports = dataset;
+
+/***/ },
+/* 32 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	///* global */
+	
+	/*
+	 * @author: 绝云（wensen.lws）
+	 * @description: dom style
+	 */
+	var arrayUtils = __webpack_require__(4);
+	var stringUtils = __webpack_require__(7);
+	var bomUtils = __webpack_require__(30);
+	
+	var domData = __webpack_require__(31);
+	var domUtils = __webpack_require__(6);
+	var domQuery = __webpack_require__(3);
+	
+	var ieVersion = bomUtils.versions.msie || 0;
+	var astr = 'DXImageTransform.Microsoft.Alpha';
+	var RE_pixel = /margin|padding|width|height|max|min|offset/; // |border
+	var pixelNamesCache = {
+	    left: true,
+	    top: true
+	};
+	var floatAlias = {
+	    cssFloat: 1,
+	    styleFloat: 1,
+	    'float': 1
+	};
+	
+	var getComputedStyle = undefined;
+	var toPixel = undefined;
+	var domStyle = undefined;
+	var getOpacity = undefined;
+	var _setOpacity = undefined;
+	
+	function af(n, f) {
+	    try {
+	        return n.filters.item(astr);
+	    } catch (e) {
+	        return f ? {} : null;
+	    }
+	}
+	function isHidden(element) {
+	    return domStyle.get(element, 'display') === 'none' || domUtils.contains(element.ownerDocument, element);
+	}
+	function showHide(elements, show) {
+	    var display = undefined,
+	        hidden = undefined;
+	    var values = [];
+	
+	    arrayUtils.each(elements, function (elem, index) {
+	        if (elem.style) {
+	            values[index] = domData.get(elem, 'olddisplay');
+	            display = elem.style.display;
+	            if (show) {
+	                // Reset the inline display of this element to learn if it is
+	                // being hidden by cascaded rules or not
+	                if (!values[index] && display === 'none') {
+	                    elem.style.display = '';
+	                }
+	
+	                // Set elements which have been overridden with display: none
+	                // in a stylesheet to whatever the default browser style is
+	                // for such an element
+	                if (elem.style.display === '' && isHidden(elem)) {
+	                    values[index] = domData.set(elem, 'olddisplay', domStyle.get(elem, 'display'));
+	                }
+	            } else {
+	                hidden = isHidden(elem);
+	
+	                if (display !== 'none' || !hidden) {
+	                    domData.set(elem, 'olddisplay', hidden ? display : domStyle.get(elem, 'display'));
+	                }
+	            }
+	        }
+	    });
+	
+	    // Set the display of most of the elements in a second loop
+	    // to avoid the constant reflow
+	    arrayUtils.each(elements, function (elem, index) {
+	        if (elem.style) {
+	            if (!show || elem.style.display === 'none' || elem.style.display === '') {
+	                elem.style.display = show ? values[index] || '' : 'none';
+	            }
+	        }
+	    });
+	    return elements;
+	}
+	function toStyleValue(node, type, value) {
+	    type = stringUtils.lc(type);
+	    if (ieVersion || bomUtils.versions.trident) {
+	        if (value === 'auto') {
+	            if (type === 'height') {
+	                return node.offsetHeight;
+	            }
+	            if (type === 'width') {
+	                return node.offsetWidth;
+	            }
+	        }
+	        if (type === 'fontweight') {
+	            switch (value) {
+	                case 700:
+	                    return 'bold';
+	                // case 400:
+	                default:
+	                    return 'normal';
+	            }
+	        }
+	    }
+	    if (!(type in pixelNamesCache)) {
+	        pixelNamesCache[type] = RE_pixel.test(type);
+	    }
+	    return pixelNamesCache[type] ? toPixel(node, value) : value;
+	}
+	
+	if (ieVersion && (ieVersion < 9 || ieVersion < 10 && bomUtils.isQuirks)) {
+	    getOpacity = function getOpacity(node) {
+	        try {
+	            return af(node).Opacity / 100; // Number
+	        } catch (e) {
+	            return 1; // Number
+	        }
+	    };
+	    _setOpacity = function setOpacity( /*DomNode*/node, /*Number*/opacity) {
+	        if (opacity === '') {
+	            opacity = 1;
+	        }
+	        var ov = opacity * 100;
+	        var fullyOpaque = opacity === 1;
+	
+	        // on IE7 Alpha(Filter opacity=100) makes text look fuzzy so disable it altogether (bug #2661),
+	        // but still update the opacity value so we can get a correct reading if it is read later:
+	        // af(node, 1).Enabled = !fullyOpaque;
+	        if (fullyOpaque) {
+	            node.style.zoom = '';
+	            if (af(node)) {
+	                node.style.filter = node.style.filter.replace(new RegExp('\\s*progid:' + astr + '\\([^\\)]+?\\)', 'i'), '');
+	            }
+	        } else {
+	            node.style.zoom = 1;
+	            if (af(node)) {
+	                af(node, 1).Opacity = ov;
+	            } else {
+	                node.style.filter += ' progid:' + astr + '(Opacity=' + ov + ')';
+	            }
+	            af(node, 1).Enabled = true;
+	        }
+	
+	        if (node.tagName.toLowerCase() === 'tr') {
+	            for (var td = node.firstChild; td; td = td.nextSibling) {
+	                if (td.tagName.toLowerCase() === 'td') {
+	                    _setOpacity(td, opacity);
+	                }
+	            }
+	        }
+	        return opacity;
+	    };
+	} else {
+	    getOpacity = function getOpacity(node) {
+	        return getComputedStyle(node).opacity;
+	    };
+	    _setOpacity = function _setOpacity(node, opacity) {
+	        node.style.opacity = opacity;
+	        return opacity;
+	    };
+	}
+	
+	// getComputedStyle {
+	if (bomUtils.isWebkit) {
+	    getComputedStyle = function getComputedStyle(node) {
+	        var style = undefined;
+	        if (node.nodeType === 1) {
+	            var dv = node.ownerDocument.defaultView;
+	            var oldDisplay = undefined;
+	            style = dv.getComputedStyle(node, null);
+	            if (!style && node.style) {
+	                /*
+	                 * early version safari (2.0?) has this bug: when element is display:none,
+	                 * getComputedStyle returns null
+	                 */
+	                oldDisplay = node.style.display;
+	                node.style.display = '';
+	                style = dv.getComputedStyle(node, null);
+	            }
+	            node.style.display = oldDisplay; // and we should change it back.
+	        }
+	        return style || {};
+	    };
+	} else if (ieVersion && ieVersion < 9 || bomUtils.isQuirks) {
+	    getComputedStyle = function getComputedStyle(node) {
+	        return node.nodeType === 1 && node.currentStyle ? node.currentStyle : {};
+	    };
+	} else {
+	    getComputedStyle = function getComputedStyle(node) {
+	        return node.nodeType === 1 ? node.ownerDocument.defaultView.getComputedStyle(node, null) : {};
+	    };
+	}
+	// }
+	// toPixel {
+	if (ieVersion) {
+	    toPixel = function toPixel(element, avalue) {
+	        if (!avalue) {
+	            return 0;
+	        }
+	        // on IE7, medium is usually 4 pixels
+	        if (avalue === 'medium') {
+	            return 4;
+	        }
+	        // style values can be floats, client code may
+	        // want to round this value for integer pixels.
+	        if (avalue.slice && avalue.slice(-2) === 'px') {
+	            return parseFloat(avalue);
+	        }
+	        var s = element.style;
+	        var rs = element.runtimeStyle;
+	        var cs = element.currentStyle;
+	        var sLeft = s.left;
+	        var rsLeft = rs.left;
+	        rs.left = cs.left;
+	        try {
+	            // 'avalue' may be incompatible with style.left, which can cause IE to throw
+	            // this has been observed for border widths using 'thin', 'medium', 'thick' constants
+	            // those particular constants could be trapped by a lookup
+	            // but perhaps there are more
+	            s.left = avalue;
+	            avalue = s.pixelLeft;
+	        } catch (e) {
+	            avalue = 0;
+	        }
+	        s.left = sLeft;
+	        rs.left = rsLeft;
+	        return avalue;
+	    };
+	} else {
+	    toPixel = function toPixel(element, value) {
+	        return parseFloat(value) || 0;
+	    };
+	}
+	// }
+	
+	domStyle = {
+	    getComputedStyle: getComputedStyle,
+	    toPixel: toPixel,
+	
+	    get: function get(node, name) {
+	        var n = domQuery.one(node);
+	        var l = arguments.length;
+	        var op = name === 'opacity';
+	        var style = undefined;
+	        if (l === 2 && op) {
+	            return getOpacity(n);
+	        }
+	        name = floatAlias[name] ? 'cssFloat' in n.style ? 'cssFloat' : 'styleFloat' : name;
+	        style = domStyle.getComputedStyle(n);
+	        return l === 1 ? style : toStyleValue(n, name, style[name] || n.style[name]);
+	    },
+	    set: function set(node, name, value) {
+	        var n = domQuery.one(node);
+	        var l = arguments.length;
+	        var op = name === 'opacity';
+	
+	        name = floatAlias[name] ? 'cssFloat' in n.style ? 'cssFloat' : 'styleFloat' : name;
+	        if (l === 3) {
+	            return op ? _setOpacity(n, value) : n.style[name] = value;
+	        }
+	        for (var x in name) {
+	            domStyle.set(node, x, name[x]);
+	        }
+	        return domStyle.getComputedStyle(n);
+	    },
+	
+	    // TODO use animation-version instead
+	    show: function show(node) {
+	        showHide(domQuery.all(node), true);
+	    },
+	    hide: function hide(node) {
+	        showHide(domQuery.all(node), false);
+	    },
+	    toggle: function toggle(node) {
+	        return domStyle.get(node, 'display') === 'none' ? domStyle.show(node) : domStyle.hide(node);
+	    }
+	};
+	
+	module.exports = domStyle;
+
+/***/ },
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true, boss: true */
 	
-	var lang = __webpack_require__(13);
+	var lang = __webpack_require__(14);
 	var abs = Math.abs;
 	
 	module.exports = function (format) {
@@ -2786,7 +3997,7 @@
 	};
 
 /***/ },
-/* 25 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2797,7 +4008,7 @@
 	 * @description: utils for html
 	 */
 	
-	var objectUtils = __webpack_require__(11);
+	var objectUtils = __webpack_require__(12);
 	
 	var escapeMap = {
 	    '&': '&amp;',
@@ -2831,7 +4042,7 @@
 	};
 
 /***/ },
-/* 26 */
+/* 35 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2843,9 +4054,9 @@
 	exports.getHeaderText = getHeaderText;
 	exports.getHeaderSelector = getHeaderSelector;
 	
-	var _number = __webpack_require__(4);
+	var _number = __webpack_require__(5);
 	
-	var _sprintf = __webpack_require__(24);
+	var _sprintf = __webpack_require__(33);
 	
 	var _sprintf2 = _interopRequireDefault(_sprintf);
 	
@@ -2869,59 +4080,83 @@
 	    for (var i = 1; i <= level; i++) {
 	        headers.push((0, _sprintf2.default)('h%d', i));
 	    }
+	
 	    return headers.join(',');
 	}
 
 /***/ },
-/* 27 */
+/* 36 */
 /***/ function(module, exports) {
 
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
-	  value: true
+	    value: true
 	});
 	exports.default = anonymous;
 	function anonymous(data, helper
 	/**/) {
-	  data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	    return s;
-	  };var _s = '<span class="toc-anchor" data-unique="' + _e(data.uniqueId) + '" style="font-weight: normal !important;">&#9875;</span>';return _s;
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<span class="toc-anchor" data-unique="' + _e(data.uniqueId) + '" style="font-weight: normal !important;">&#9875;</span>';return _s;
 	};
 
 /***/ },
-/* 28 */
+/* 37 */
 /***/ function(module, exports) {
 
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
-	  value: true
+	    value: true
 	});
 	exports.default = anonymous;
 	function anonymous(data, helper
 	/**/) {
-	  data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	    return s;
-	  };var _s = '<li class="toc-link level' + _e(data.level) + '" data-unique="' + _e(data.uniqueId) + '"><span class="link-text">' + _e(data.text) + '</span></li>';return _s;
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<span class="' + _e(data.className) + '" data-unique="' + _e(data.uniqueId) + '">&blacktriangledown;</span>';return _s;
 	};
 
 /***/ },
-/* 29 */
+/* 38 */
 /***/ function(module, exports) {
 
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
-	  value: true
+	    value: true
 	});
 	exports.default = anonymous;
 	function anonymous(data, helper
 	/**/) {
-	  data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	    return s;
-	  };var _s = '<ul class="toc-link-list"></ul>';return _s;
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<li class="toc-link level' + _e(data.level) + '"><span class="' + _e(data.textClassName) + '" data-unique="' + _e(data.uniqueId) + '">' + _e(data.text) + '</span></li>';return _s;
 	};
+
+/***/ },
+/* 39 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<ul class="toc-link-list"></ul>';return _s;
+	};
+
+/***/ },
+/* 40 */
+/***/ function(module, exports) {
+
+	// removed by extract-text-webpack-plugin
 
 /***/ }
 /******/ ]);

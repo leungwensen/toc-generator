@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>demo for toc-generator</title>
     <link rel="stylesheet" href="../lib/marked-plus-renderer/libs.css">
+    <link rel="stylesheet" href="../dist/toc-generator.css">
     <style>
         .content {
             background-color: #fff;
@@ -22,14 +23,12 @@
             display: table;
             width: auto;
         }
-        #toc ul {
-            list-style: none;
-        }
     </style>
 </head>
 <body>
     <div class="markdown-body content">
         <h1>toc-generator</h1>
+        <button id="destroy-toc">destroy toc instance</button>
         <div id="toc"></div>
     </div>
     <div id="container" class="markdown-body content"></div>
