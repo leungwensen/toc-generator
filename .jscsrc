@@ -9,5 +9,6 @@
     "requireCamelCaseOrUpperCaseIdentifiers": {
         "ignoreProperties": true,
         "strict": false
-    }
+    },
+    "maximumLineLength": 1024000
 }
