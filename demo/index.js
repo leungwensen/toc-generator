@@ -2662,8 +2662,6 @@
 	 * Created by liangwensen on 2/17/16.
 	 */
 	
-	__webpack_require__(40);
-	
 	var main = (0, _object.extend)({
 	    Toc: _toc2.default,
 	    generate: function generate(element, options) {
@@ -2796,6 +2794,7 @@
 	        if (element) {
 	            element = _query2.default.one(element);
 	        }
+	
 	        (0, _event2.default)(me);
 	        me._srcElement = element || body;
 	        me._options = extend({}, DEFAULT_OPTIONS, options);
@@ -2981,6 +2980,7 @@
 	        _zeroLang2.default.each(_query2.default.all('.toc-anchor', me._srcElement), function (anchor) {
 	            _construct2.default.destroy(anchor);
 	        });
+	
 	        _construct2.default.destroy(me._outerDomNode);
 	        return me;
 	    }
@@ -4151,12 +4151,6 @@
 	        return s;
 	    };var _s = '<ul class="toc-link-list"></ul>';return _s;
 	};
-
-/***/ },
-/* 40 */
-/***/ function(module, exports) {
-
-	// removed by extract-text-webpack-plugin
 
 /***/ }
 /******/ ]);
