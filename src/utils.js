@@ -21,5 +21,6 @@ export function getHeaderSelector(level) {
     for (let i = 1; i <= level; i++) {
         headers.push(sprintf('h%d', i));
     }
+
     return headers.join(',');
 }

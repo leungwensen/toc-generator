@@ -15,7 +15,7 @@ let main = extend({
     Toc,
     generate(element, options) {
         return new Toc(element, options);
-    }
+    },
 }, utils);
 
 win.tg = win.tocGenerator = main;

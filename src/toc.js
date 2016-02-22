@@ -1,10 +1,14 @@
 /**
  * Created by liangwensen on 2/17/16.
  */
+import eventFn from 'zero-events/event';
 import declare from 'zero-oop/declare';
 import domClass from 'zero-dom/class';
 import domConstruct from 'zero-dom/construct';
+import domData from 'zero-dom/data';
+import domEvent from 'zero-dom/event';
 import domQuery from 'zero-dom/query';
+import domStyle from 'zero-dom/style';
 import sprintf from 'zero-fmt/sprintf';
 import lang from 'zero-lang';
 import htmlUtils from 'zero-text/html';
@@ -16,60 +20,94 @@ import {
 } from './utils';
 
 import tmplAnchor from './template/anchor';
+import tmplExpander from './template/expander';
 import tmplLink from './template/link';
 import tmplLinkList from './template/link-list';
 
 const DEFAULT_OPTIONS = {
     anchorIdPrefix: 'toc-',
+    expanderClassName: 'link-expander',
+    expanderExpandedText: '&blacktriangledown;',
+    expanderText: '&blacktriangleright;',
     hasChildClassName: 'has-child',
     maxDepth: 3,
+    textClassName: 'link-text',
     uniqueIdSeparator: '-',
-    uniqueIdSuffix: '1'
+    uniqueIdSuffix: '1',
 };
 
 const extend = lang.extend;
 const body = document.body;
 const templateHelper = extend({}, htmlUtils, lang);
 
+function addHeaderExpander(header, options) {
+    if (!header._expanderElement) {
+        domConstruct.place(tmplExpander({
+            uniqueId: header.uniqueId,
+            className: options.expanderClassName,
+        }), header.element, 'first');
+        header._expanderElement = domQuery.one('.' + options.expanderClassName, header.element);
+    }
+}
+
+function toggleHeaderExpanderText(header, options, isExpanded) {
+    header._expanderElement.innerHTML = isExpanded ? options.expanderExpandedText : options.expanderText;
+}
+
+function locationCallback(e) {
+    let delegateTarget = e.delegateTarget;
+    let uniqueId = domData.get(delegateTarget, 'unique');
+    lang.global.location = '#' + uniqueId;
+}
+
 let Toc = declare({
     constructor(element, options) {
-        let self = this;
+        let me = this;
         if (element) {
             element = domQuery.one(element);
         }
-        self._srcElement = element || body;
-        self._options = extend({}, DEFAULT_OPTIONS, options);
-        self._parse()
-            ._bindEvents();
-        return self;
-    },
-    _parse() {
-        let self = this;
-        let options = self._options;
-        let tocElement = self._outerDomNode = domConstruct.toDom(tmplLinkList({}, templateHelper));
 
-        let headers = domQuery.all(getHeaderSelector(options.maxDepth), self._srcElement);
+        eventFn(me);
+        me._srcElement = element || body;
+        me._options = extend({}, DEFAULT_OPTIONS, options);
+        me._parse()
+            ._bindEvents();
+        return me;
+    },
+
+    _parse() {
+        let me = this;
+        let options = me._options;
+        let tocElement = me._outerDomNode = domConstruct.toDom(tmplLinkList({}, templateHelper));
+
+        let headers = domQuery.all(getHeaderSelector(options.maxDepth), me._srcElement);
         let currentHeaderMeta;
         let headerMetaById = {};
 
         function getHeaderUniqueId(text) {
-            let id = text.replace(/\s+/, options.uniqueIdSeparator);
+            let id = text
+                .replace(/\s+/g, options.uniqueIdSeparator)
+                .replace(/\\/g, options.uniqueIdSeparator)
+                .replace(/\//g, options.uniqueIdSeparator);
             if (!lang.hasKey(headerMetaById, id)) {
                 return id;
             }
+
             return getHeaderUniqueId(id + options.uniqueIdSuffix);
         }
 
         function addToChildren(headerMeta, parentHeaderMeta) {
-            console.log(arguments);
             let childrenElement = domQuery.one('ul', parentHeaderMeta.element);
             if (!childrenElement) {
                 childrenElement = domConstruct.toDom(tmplLinkList({}, templateHelper));
                 domConstruct.place(childrenElement, parentHeaderMeta.element);
             }
+
             domConstruct.place(headerMeta.element, childrenElement);
             headerMeta.parentId = parentHeaderMeta.uniqueId;
-            parentHeaderMeta.hasChild = true;
+            parentHeaderMeta.children.push(headerMeta.uniqueId);
+            parentHeaderMeta.childrenElement = childrenElement;
+            addHeaderExpander(parentHeaderMeta, options);
         }
 
         lang.each(headers, function (header) {
@@ -80,7 +118,10 @@ let Toc = declare({
                 text,
                 uniqueId,
                 level,
-                hasChild: false
+                isExpanded: true,
+                expanderClassName: options.expanderClassName,
+                textClassName: options.textClassName,
+                children: [],
             };
             let linkElement = domConstruct.toDom(tmplLink(meta, templateHelper));
             let anchorElement = domConstruct.toDom(tmplAnchor(meta, templateHelper));
@@ -101,6 +142,7 @@ let Toc = declare({
                             break;
                         }
                     }
+
                     if (parentMeta) {
                         addToChildren(meta, parentMeta);
                     } else {
@@ -110,50 +152,123 @@ let Toc = declare({
             } else {
                 domConstruct.place(linkElement, tocElement);
             }
+
             headerMetaById[uniqueId] = meta;
             currentHeaderMeta = meta;
         });
+
         lang.forIn(headerMetaById, function (meta) {
-            if (meta.hasChild) {
+            if (meta.children.length) {
                 domClass.add(meta.element, options.hasChildClassName);
             }
         });
 
-        self._headerMetaById = headerMetaById;
-        return self;
+        me._headerMetaById = headerMetaById;
+        return me;
     },
+
     _bindEvents() {
-        let self = this;
-        return self;
+        let me = this;
+        let options = me._options;
+        domEvent.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
+            let delegateTarget = e.delegateTarget;
+            let uniqueId = domData.get(delegateTarget, 'unique');
+            me.expandOrCollapse(uniqueId);
+        });
+
+        domEvent.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
+            let delegateTarget = e.delegateTarget;
+            let uniqueId = domData.get(delegateTarget, 'unique');
+            me.scrollTo(uniqueId);
+            me.trigger('scrolled-to', me._headerMetaById[uniqueId]);
+        });
+
+        domEvent.on(me._srcElement, 'click', '.toc-anchor', locationCallback);
+
+        return me;
     },
+
+    _unbindEvents() {
+        let me = this;
+        domEvent.off(me._srcElement, 'click', locationCallback);
+        return me;
+    },
+
+    expand(id) {
+        let me = this;
+        let header = me._headerMetaById[id];
+        if (header && header.childrenElement) {
+            domStyle.show(header.childrenElement);
+            toggleHeaderExpanderText(header, me._options, true);
+            header.isExpanded = true;
+        }
+
+        return me;
+    },
+
+    collapse(id) {
+        let me = this;
+        let header = me._headerMetaById[id];
+        if (header && header.childrenElement) {
+            domStyle.hide(header.childrenElement);
+            toggleHeaderExpanderText(header, me._options);
+            header.isExpanded = false;
+        }
+
+        return me;
+    },
+
+    expandOrCollapse(id) {
+        let me = this;
+        let header = me._headerMetaById[id];
+        if (header) {
+            me[header.isExpanded ? 'collapse' : 'expand'](id);
+        }
+
+        return me;
+    },
+
     scrollTo(uniqueId) {
-        let self = this;
+        let me = this;
         let anchorSelector = sprintf('[data-unique="%s"]', uniqueId);
         try {
-            let anchorNode = domQuery.one(anchorSelector, self._srcElement);
+            let anchorNode = domQuery.one(anchorSelector, me._srcElement);
             if (anchorNode) {
                 anchorNode.scrollIntoView(true);
             }
         } catch (e) {
         }
-        return self;
+
+        return me;
     },
+
     placeAt(container, position) {
-        let self = this;
+        let me = this;
         if (container) {
             container = domQuery.one(container);
         }
+
         container = container || body;
         position = position || '';
-        domConstruct.place(self._outerDomNode, container, position);
-        return self;
+        domConstruct.place(me._outerDomNode, container, position);
+        return me;
     },
+
     destroy() {
-        let self = this;
-        // remove all dom nodes
+        let me = this;
+        let options = me._options;
+
         // unbind all events
-        return self;
-    }
+        me._unbindEvents();
+
+        // remove all dom nodes
+        lang.each(domQuery.all('.toc-anchor', me._srcElement), function (anchor) {
+            domConstruct.destroy(anchor);
+        });
+
+        domConstruct.destroy(me._outerDomNode);
+        return me;
+    },
 });
 
 export default Toc;
