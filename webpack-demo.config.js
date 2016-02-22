@@ -6,7 +6,8 @@ var ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
     entry: {
-        'index': path.resolve(__dirname, './demo/index.es6.js')
+        'index': path.resolve(__dirname, './demo/index.es6.js'),
+        'readme': path.resolve(__dirname, './demo/readme.es6.js')
     },
     output: {
         path: path.resolve(__dirname, './demo'),
