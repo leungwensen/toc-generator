@@ -9,7 +9,8 @@ var webpack = require('webpack');
 var webpackConf = require(path.resolve(__dirname, '../webpack.config'));
 
 gulp.task('pack', [
-    'jscs'
+    'jscs',
+    'less'
 ], function (done) {
     webpack(webpackConf, function (err, stats) {
         if (err) {
