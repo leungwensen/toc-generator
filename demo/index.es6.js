@@ -8,7 +8,7 @@ import tg from '../src/index';
 
 const mpr = win.mpr;
 
-fetch('../lib/marked-plus-renderer/features.md')
+fetch('../lib/marked-plus-renderer/features.md?raw')
     .then(function (res) {
         return res.text();
     })

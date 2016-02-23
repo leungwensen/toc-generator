@@ -74,7 +74,7 @@
 	
 	var mpr = _global2.default.mpr;
 	
-	(0, _fetch2.default)('../lib/marked-plus-renderer/features.md').then(function (res) {
+	(0, _fetch2.default)('../lib/marked-plus-renderer/features.md?raw').then(function (res) {
 	    return res.text();
 	}).then(function (markdownString) {
 	    var containerElement = _query2.default.one('#container');
