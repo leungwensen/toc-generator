@@ -79,10 +79,10 @@
 	}).then(function (markdownString) {
 	    var containerElement = _query2.default.one('#container');
 	    mpr.render(containerElement, markdownString);
-	    var toc = new _index2.default.Toc(containerElement, {
+	    var toc = new _index2.default.generate(containerElement, {
 	        maxDepth: 6
 	    });
-	    toc.on('scrolled-to', function (headerMeta) {
+	    toc.on('click', function (headerMeta) {
 	        (0, _hashRouter2.default)(headerMeta.uniqueId);
 	    });
 	    toc.placeAt(_query2.default.one('#toc'));
@@ -2650,7 +2650,11 @@
 	
 	var _toc2 = _interopRequireDefault(_toc);
 	
-	var _utils = __webpack_require__(35);
+	var _generate = __webpack_require__(40);
+	
+	var _generate2 = _interopRequireDefault(_generate);
+	
+	var _utils = __webpack_require__(42);
 	
 	var _utils2 = _interopRequireDefault(_utils);
 	
@@ -2658,16 +2662,12 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	/**
-	 * Created by liangwensen on 2/17/16.
-	 */
-	
 	var main = (0, _object.extend)({
 	    Toc: _toc2.default,
-	    generate: function generate(element, options) {
-	        return new _toc2.default(element, options);
-	    }
-	}, _utils2.default);
+	    generate: _generate2.default
+	}, _utils2.default); /**
+	                      * Created by liangwensen on 2/17/16.
+	                      */
 	
 	_global2.default.tg = _global2.default.tocGenerator = main;
 	
@@ -2683,90 +2683,71 @@
 	    value: true
 	});
 	
-	var _event = __webpack_require__(27);
-	
-	var _event2 = _interopRequireDefault(_event);
-	
 	var _declare = __webpack_require__(13);
 	
 	var _declare2 = _interopRequireDefault(_declare);
 	
-	var _class = __webpack_require__(28);
+	var _class = __webpack_require__(27);
 	
 	var _class2 = _interopRequireDefault(_class);
 	
-	var _construct = __webpack_require__(29);
+	var _construct = __webpack_require__(28);
 	
 	var _construct2 = _interopRequireDefault(_construct);
 	
-	var _data = __webpack_require__(31);
+	var _data = __webpack_require__(30);
 	
 	var _data2 = _interopRequireDefault(_data);
 	
-	var _event3 = __webpack_require__(1);
+	var _event = __webpack_require__(1);
 	
-	var _event4 = _interopRequireDefault(_event3);
+	var _event2 = _interopRequireDefault(_event);
 	
 	var _query = __webpack_require__(3);
 	
 	var _query2 = _interopRequireDefault(_query);
 	
-	var _style = __webpack_require__(32);
+	var _style = __webpack_require__(31);
 	
 	var _style2 = _interopRequireDefault(_style);
 	
-	var _sprintf = __webpack_require__(33);
+	var _event3 = __webpack_require__(32);
 	
-	var _sprintf2 = _interopRequireDefault(_sprintf);
+	var _event4 = _interopRequireDefault(_event3);
 	
 	var _zeroLang = __webpack_require__(14);
 	
 	var _zeroLang2 = _interopRequireDefault(_zeroLang);
 	
-	var _html = __webpack_require__(34);
+	var _sprintf = __webpack_require__(33);
 	
-	var _html2 = _interopRequireDefault(_html);
+	var _sprintf2 = _interopRequireDefault(_sprintf);
 	
-	var _utils = __webpack_require__(35);
+	var _templateHelper = __webpack_require__(34);
 	
-	var _anchor = __webpack_require__(36);
+	var _templateHelper2 = _interopRequireDefault(_templateHelper);
 	
-	var _anchor2 = _interopRequireDefault(_anchor);
-	
-	var _expander = __webpack_require__(37);
+	var _expander = __webpack_require__(36);
 	
 	var _expander2 = _interopRequireDefault(_expander);
 	
-	var _link = __webpack_require__(38);
+	var _link = __webpack_require__(37);
 	
 	var _link2 = _interopRequireDefault(_link);
 	
-	var _linkList = __webpack_require__(39);
+	var _linkList = __webpack_require__(38);
 	
 	var _linkList2 = _interopRequireDefault(_linkList);
 	
+	var _const = __webpack_require__(39);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	/**
-	 * Created by liangwensen on 2/17/16.
-	 */
+	var extend = _zeroLang2.default.extend; /**
+	                                         * Created by liangwensen on 2/17/16.
+	                                         */
 	
-	
-	var DEFAULT_OPTIONS = {
-	    anchorIdPrefix: 'toc-',
-	    expanderClassName: 'link-expander',
-	    expanderExpandedText: '&blacktriangledown;',
-	    expanderText: '&blacktriangleright;',
-	    hasChildClassName: 'has-child',
-	    maxDepth: 3,
-	    textClassName: 'link-text',
-	    uniqueIdSeparator: '-',
-	    uniqueIdSuffix: '1'
-	};
-	
-	var extend = _zeroLang2.default.extend;
 	var body = document.body;
-	var templateHelper = extend({}, _html2.default, _zeroLang2.default);
 	
 	function addHeaderExpander(header, options) {
 	    if (!header._expanderElement) {
@@ -2782,47 +2763,27 @@
 	    header._expanderElement.innerHTML = isExpanded ? options.expanderExpandedText : options.expanderText;
 	}
 	
-	function locationCallback(e) {
-	    var delegateTarget = e.delegateTarget;
-	    var uniqueId = _data2.default.get(delegateTarget, 'unique');
-	    _zeroLang2.default.global.location = '#' + uniqueId;
-	}
-	
 	var Toc = (0, _declare2.default)({
-	    constructor: function constructor(element, options) {
+	    constructor: function constructor(links, options) {
 	        var me = this;
-	        if (element) {
-	            element = _query2.default.one(element);
-	        }
 	
-	        (0, _event2.default)(me);
-	        me._srcElement = element || body;
-	        me._options = extend({}, DEFAULT_OPTIONS, options);
-	        me._parse()._bindEvents();
+	        (0, _event4.default)(me);
+	        me._options = extend({}, _const.DEFAULT_OPTIONS, options);
+	        me._render(links);
+	        me._bindEvents();
 	        return me;
 	    },
-	    _parse: function _parse() {
+	    _render: function _render(links) {
 	        var me = this;
 	        var options = me._options;
-	        var tocElement = me._outerDomNode = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
-	
-	        var headers = _query2.default.all((0, _utils.getHeaderSelector)(options.maxDepth), me._srcElement);
+	        var tocElement = me._outerDomNode = _construct2.default.toDom((0, _linkList2.default)({}, _templateHelper2.default));
 	        var currentHeaderMeta = undefined;
 	        var headerMetaById = {};
-	
-	        function getHeaderUniqueId(text) {
-	            var id = text.replace(/\s+/g, options.uniqueIdSeparator).replace(/\\/g, options.uniqueIdSeparator).replace(/\//g, options.uniqueIdSeparator);
-	            if (!_zeroLang2.default.hasKey(headerMetaById, id)) {
-	                return id;
-	            }
-	
-	            return getHeaderUniqueId(id + options.uniqueIdSuffix);
-	        }
 	
 	        function addToChildren(headerMeta, parentHeaderMeta) {
 	            var childrenElement = _query2.default.one('ul', parentHeaderMeta.element);
 	            if (!childrenElement) {
-	                childrenElement = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
+	                childrenElement = _construct2.default.toDom((0, _linkList2.default)({}, _templateHelper2.default));
 	                _construct2.default.place(childrenElement, parentHeaderMeta.element);
 	            }
 	
@@ -2833,25 +2794,10 @@
 	            addHeaderExpander(parentHeaderMeta, options);
 	        }
 	
-	        _zeroLang2.default.each(headers, function (header) {
-	            var level = (0, _utils.getHeaderLevel)(header);
-	            var text = (0, _utils.getHeaderText)(header);
-	            var uniqueId = getHeaderUniqueId(text);
-	            var meta = {
-	                text: text,
-	                uniqueId: uniqueId,
-	                level: level,
-	                isExpanded: true,
-	                expanderClassName: options.expanderClassName,
-	                textClassName: options.textClassName,
-	                children: []
-	            };
-	            var linkElement = _construct2.default.toDom((0, _link2.default)(meta, templateHelper));
-	            var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, templateHelper));
+	        _zeroLang2.default.each(links, function (meta) {
+	            var level = meta.level;
+	            var linkElement = _construct2.default.toDom((0, _link2.default)(meta, _templateHelper2.default));
 	            meta.element = linkElement;
-	            meta.anchorElement = anchorElement;
-	            _construct2.default.place(anchorElement, header, 'first'); // add anchor to header
-	
 	            if (currentHeaderMeta) {
 	                if (currentHeaderMeta.level < level) {
 	                    // NOTICE that "h2 < h1"
@@ -2876,9 +2822,8 @@
 	            } else {
 	                _construct2.default.place(linkElement, tocElement);
 	            }
-	
-	            headerMetaById[uniqueId] = meta;
 	            currentHeaderMeta = meta;
+	            headerMetaById[meta.uniqueId] = meta;
 	        });
 	
 	        _zeroLang2.default.forIn(headerMetaById, function (meta) {
@@ -2888,31 +2833,37 @@
 	        });
 	
 	        me._headerMetaById = headerMetaById;
+	
 	        return me;
 	    },
 	    _bindEvents: function _bindEvents() {
 	        var me = this;
 	        var options = me._options;
-	        _event4.default.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
+	
+	        _event2.default.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
 	            var delegateTarget = e.delegateTarget;
 	            var uniqueId = _data2.default.get(delegateTarget, 'unique');
+	            var headerMeta = me._headerMetaById[uniqueId];
 	            me.expandOrCollapse(uniqueId);
+	            if (headerMeta.isExpanded) {
+	                me.trigger('expanded', headerMeta);
+	            } else {
+	                me.trigger('collapsed', headerMeta);
+	            }
 	        });
 	
-	        _event4.default.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
+	        _event2.default.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
 	            var delegateTarget = e.delegateTarget;
 	            var uniqueId = _data2.default.get(delegateTarget, 'unique');
 	            me.scrollTo(uniqueId);
-	            me.trigger('scrolled-to', me._headerMetaById[uniqueId]);
+	            me.trigger('clicked', me._headerMetaById[uniqueId]);
 	        });
-	
-	        _event4.default.on(me._srcElement, 'click', '.toc-anchor', locationCallback);
 	
 	        return me;
 	    },
 	    _unbindEvents: function _unbindEvents() {
 	        var me = this;
-	        _event4.default.off(me._srcElement, 'click', locationCallback);
+	        me.trigger('unbind-events');
 	        return me;
 	    },
 	    expand: function expand(id) {
@@ -2971,15 +2922,9 @@
 	    },
 	    destroy: function destroy() {
 	        var me = this;
-	        var options = me._options;
 	
 	        // unbind all events
 	        me._unbindEvents();
-	
-	        // remove all dom nodes
-	        _zeroLang2.default.each(_query2.default.all('.toc-anchor', me._srcElement), function (anchor) {
-	            _construct2.default.destroy(anchor);
-	        });
 	
 	        _construct2.default.destroy(me._outerDomNode);
 	        return me;
@@ -2990,79 +2935,6 @@
 
 /***/ },
 /* 27 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
-	
-	// TODO NEED to strengthen
-	
-	var arrayUtils = __webpack_require__(4);
-	
-	var event = function event(target) {
-	    // if target not defined, it is a global event
-	    target = target || this;
-	
-	    // all events stores in the the collection: *._events
-	    var events = target._events = {};
-	
-	    target.on = function (name, callback, context) {
-	        /*
-	         * @description: 绑定事件
-	         */
-	        var list = events[name] || (events[name] = []);
-	        list.push({
-	            callback: callback,
-	            context: context
-	        });
-	        return target;
-	    };
-	    target.off = function (name, callback) {
-	        /*
-	         * @description: 解绑事件
-	         */
-	        if (!name) {
-	            events = {};
-	            return target;
-	        }
-	        var list = events[name] || [];
-	        var i = list.length;
-	        if (!callback) {
-	            list = [];
-	        } else {
-	            while (i > 0) {
-	                i--;
-	                if (list[i].callback === callback) {
-	                    list.splice(i, 1);
-	                }
-	            }
-	        }
-	        events[name] = list;
-	        return target;
-	    };
-	    target.emit = function () {
-	        /*
-	         * @description: 触发事件
-	         */
-	        var args = arrayUtils.toArray(arguments);
-	        var list = events[args.shift()] || [];
-	        arrayUtils.each(list, function (evt) {
-	            if (!evt.callback) {
-	                throw 'event callback is not defined';
-	            }
-	            evt.callback.apply(evt.context, args);
-	        });
-	        return target;
-	    };
-	    target.trigger = target.emit; // alias
-	    return target;
-	};
-	
-	module.exports = event;
-
-/***/ },
-/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3189,7 +3061,7 @@
 	module.exports = domClass;
 
 /***/ },
-/* 29 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3203,7 +3075,7 @@
 	 * @reference   : https://github.com/dojo/dojo/blob/master/dom-construct.js
 	 */
 	
-	var bomUtils = __webpack_require__(30);
+	var bomUtils = __webpack_require__(29);
 	var arrayUtils = __webpack_require__(4);
 	var objectUtils = __webpack_require__(12);
 	var stringUtils = __webpack_require__(7);
@@ -3381,7 +3253,7 @@
 	module.exports = domConstruct;
 
 /***/ },
-/* 30 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3530,7 +3402,7 @@
 	};
 
 /***/ },
-/* 31 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3590,7 +3462,7 @@
 	module.exports = dataset;
 
 /***/ },
-/* 32 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -3604,9 +3476,9 @@
 	 */
 	var arrayUtils = __webpack_require__(4);
 	var stringUtils = __webpack_require__(7);
-	var bomUtils = __webpack_require__(30);
+	var bomUtils = __webpack_require__(29);
 	
-	var domData = __webpack_require__(31);
+	var domData = __webpack_require__(30);
 	var domUtils = __webpack_require__(6);
 	var domQuery = __webpack_require__(3);
 	
@@ -3880,6 +3752,79 @@
 	module.exports = domStyle;
 
 /***/ },
+/* 32 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	
+	// TODO NEED to strengthen
+	
+	var arrayUtils = __webpack_require__(4);
+	
+	var event = function event(target) {
+	    // if target not defined, it is a global event
+	    target = target || this;
+	
+	    // all events stores in the the collection: *._events
+	    var events = target._events = {};
+	
+	    target.on = function (name, callback, context) {
+	        /*
+	         * @description: 绑定事件
+	         */
+	        var list = events[name] || (events[name] = []);
+	        list.push({
+	            callback: callback,
+	            context: context
+	        });
+	        return target;
+	    };
+	    target.off = function (name, callback) {
+	        /*
+	         * @description: 解绑事件
+	         */
+	        if (!name) {
+	            events = {};
+	            return target;
+	        }
+	        var list = events[name] || [];
+	        var i = list.length;
+	        if (!callback) {
+	            list = [];
+	        } else {
+	            while (i > 0) {
+	                i--;
+	                if (list[i].callback === callback) {
+	                    list.splice(i, 1);
+	                }
+	            }
+	        }
+	        events[name] = list;
+	        return target;
+	    };
+	    target.emit = function () {
+	        /*
+	         * @description: 触发事件
+	         */
+	        var args = arrayUtils.toArray(arguments);
+	        var list = events[args.shift()] || [];
+	        arrayUtils.each(list, function (evt) {
+	            if (!evt.callback) {
+	                throw 'event callback is not defined';
+	            }
+	            evt.callback.apply(evt.context, args);
+	        });
+	        return target;
+	    };
+	    target.trigger = target.emit; // alias
+	    return target;
+	};
+	
+	module.exports = event;
+
+/***/ },
 /* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -4002,6 +3947,34 @@
 
 	'use strict';
 	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _zeroLang = __webpack_require__(14);
+	
+	var _zeroLang2 = _interopRequireDefault(_zeroLang);
+	
+	var _html = __webpack_require__(35);
+	
+	var _html2 = _interopRequireDefault(_html);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	/**
+	 * Created by liangwensen on 3/16/16.
+	 */
+	
+	var templateHelper = _zeroLang2.default.extend({}, _html2.default, _zeroLang2.default);
+	
+	exports.default = templateHelper;
+
+/***/ },
+/* 35 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/*
 	 * @author: 绝云（wensen.lws）
@@ -4042,7 +4015,213 @@
 	};
 
 /***/ },
-/* 35 */
+/* 36 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<span class="' + _e(data.className) + '" data-unique="' + _e(data.uniqueId) + '">&blacktriangledown;</span>';return _s;
+	};
+
+/***/ },
+/* 37 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<li class="toc-link level' + _e(data.level) + '"><span class="' + _e(data.textClassName) + '" data-unique="' + _e(data.uniqueId) + '">' + _e(data.text) + '</span></li>';return _s;
+	};
+
+/***/ },
+/* 38 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<ul class="toc-link-list"></ul>';return _s;
+	};
+
+/***/ },
+/* 39 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	/**
+	 * Created by liangwensen on 3/16/16.
+	 */
+	
+	var DEFAULT_OPTIONS = {
+	    expanderClassName: 'link-expander',
+	    expanderExpandedText: '&blacktriangledown;',
+	    expanderText: '&blacktriangleright;',
+	    hasChildClassName: 'has-child',
+	    maxDepth: 3,
+	    textClassName: 'link-text',
+	    uniqueIdSeparator: '-',
+	    uniqueIdSuffix: '1',
+	    uniqueIdPrefix: '/'
+	};
+	
+	exports.DEFAULT_OPTIONS = DEFAULT_OPTIONS;
+
+/***/ },
+/* 40 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	
+	var _construct = __webpack_require__(28);
+	
+	var _construct2 = _interopRequireDefault(_construct);
+	
+	var _event = __webpack_require__(1);
+	
+	var _event2 = _interopRequireDefault(_event);
+	
+	var _query = __webpack_require__(3);
+	
+	var _query2 = _interopRequireDefault(_query);
+	
+	var _zeroLang = __webpack_require__(14);
+	
+	var _zeroLang2 = _interopRequireDefault(_zeroLang);
+	
+	var _toc = __webpack_require__(26);
+	
+	var _toc2 = _interopRequireDefault(_toc);
+	
+	var _anchor = __webpack_require__(41);
+	
+	var _anchor2 = _interopRequireDefault(_anchor);
+	
+	var _templateHelper = __webpack_require__(34);
+	
+	var _templateHelper2 = _interopRequireDefault(_templateHelper);
+	
+	var _const = __webpack_require__(39);
+	
+	var _utils = __webpack_require__(42);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var body = document.body; /**
+	                           * Created by liangwensen on 3/16/16.
+	                           */
+	
+	function locationCallback(e) {
+	    var delegateTarget = e.delegateTarget;
+	    var uniqueId = domData.get(delegateTarget, 'unique');
+	    _zeroLang2.default.global.location = '#' + uniqueId;
+	}
+	
+	function generate(element, options) {
+	    options = _zeroLang2.default.extend({}, _const.DEFAULT_OPTIONS, options);
+	    if (element) {
+	        element = _query2.default.one(element);
+	    }
+	    element = element || body;
+	
+	    var links = [];
+	    var headers = _query2.default.all((0, _utils.getHeaderSelector)(options.maxDepth), element);
+	    var headerMetaById = {};
+	
+	    function getHeaderUniqueId(text) {
+	        var id = text.replace(/\s+/g, options.uniqueIdSeparator).replace(/\\/g, options.uniqueIdSeparator).replace(/\//g, options.uniqueIdSeparator);
+	        if (!_zeroLang2.default.hasKey(headerMetaById, id)) {
+	            return options.uniqueIdPrefix + id;
+	        }
+	
+	        return getHeaderUniqueId(id + options.uniqueIdSuffix);
+	    }
+	
+	    _zeroLang2.default.each(headers, function (header) {
+	        var level = (0, _utils.getHeaderLevel)(header);
+	        var text = (0, _utils.getHeaderText)(header);
+	        var uniqueId = getHeaderUniqueId(text);
+	        var meta = {
+	            text: text,
+	            uniqueId: uniqueId,
+	            level: level,
+	            isExpanded: true,
+	            expanderClassName: options.expanderClassName,
+	            textClassName: options.textClassName,
+	            children: []
+	        };
+	        var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, _templateHelper2.default));
+	        meta.anchorElement = anchorElement;
+	        _construct2.default.place(anchorElement, header, 'first'); // add anchor to header
+	
+	        headerMetaById[uniqueId] = meta;
+	        links.push(meta);
+	    });
+	
+	    var toc = new _toc2.default(links, options);
+	
+	    _event2.default.on(element, 'click', '.toc-anchor', locationCallback);
+	    toc.on('unbind-events', function () {
+	        _event2.default.off(element, 'click', locationCallback);
+	        // remove all dom nodes
+	        _zeroLang2.default.each(_query2.default.all('.toc-anchor', element), function (anchor) {
+	            _construct2.default.destroy(anchor);
+	        });
+	    });
+	
+	    return toc;
+	}
+	
+	exports.default = generate;
+
+/***/ },
+/* 41 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<span class="toc-anchor" data-unique="' + _e(data.uniqueId) + '" style="font-weight: normal !important;">&#9875;</span>';return _s;
+	};
+
+/***/ },
+/* 42 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -4083,74 +4262,6 @@
 	
 	    return headers.join(',');
 	}
-
-/***/ },
-/* 36 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<span class="toc-anchor" data-unique="' + _e(data.uniqueId) + '" style="font-weight: normal !important;">&#9875;</span>';return _s;
-	};
-
-/***/ },
-/* 37 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<span class="' + _e(data.className) + '" data-unique="' + _e(data.uniqueId) + '">&blacktriangledown;</span>';return _s;
-	};
-
-/***/ },
-/* 38 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<li class="toc-link level' + _e(data.level) + '"><span class="' + _e(data.textClassName) + '" data-unique="' + _e(data.uniqueId) + '">' + _e(data.text) + '</span></li>';return _s;
-	};
-
-/***/ },
-/* 39 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<ul class="toc-link-list"></ul>';return _s;
-	};
 
 /***/ }
 /******/ ]);

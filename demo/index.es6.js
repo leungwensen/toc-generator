@@ -15,10 +15,10 @@ fetch('../lib/marked-plus-renderer/features.md?raw')
     .then(function (markdownString) {
         let containerElement = domQuery.one('#container');
         mpr.render(containerElement, markdownString);
-        let toc = new tg.Toc(containerElement, {
+        let toc = new tg.generate(containerElement, {
             maxDepth: 6
         });
-        toc.on('scrolled-to', function (headerMeta) {
+        toc.on('click', function (headerMeta) {
             hashRouter(headerMeta.uniqueId);
         });
         toc.placeAt(domQuery.one('#toc'));
