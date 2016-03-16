@@ -5,6 +5,7 @@
 import win from 'zero-lang/global';
 
 import Toc from './toc';
+import generate from './generate';
 import utils from './utils';
 
 import {
@@ -13,9 +14,7 @@ import {
 
 let main = extend({
     Toc,
-    generate(element, options) {
-        return new Toc(element, options);
-    },
+    generate
 }, utils);
 
 win.tg = win.tocGenerator = main;

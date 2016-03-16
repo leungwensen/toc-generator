@@ -1,7 +1,6 @@
 /**
  * Created by liangwensen on 2/17/16.
  */
-import eventFn from 'zero-events/event';
 import declare from 'zero-oop/declare';
 import domClass from 'zero-dom/class';
 import domConstruct from 'zero-dom/construct';
@@ -9,36 +8,20 @@ import domData from 'zero-dom/data';
 import domEvent from 'zero-dom/event';
 import domQuery from 'zero-dom/query';
 import domStyle from 'zero-dom/style';
-import sprintf from 'zero-fmt/sprintf';
+import eventFn from 'zero-events/event';
 import lang from 'zero-lang';
-import htmlUtils from 'zero-text/html';
-
-import {
-    getHeaderLevel,
-    getHeaderSelector,
-    getHeaderText
-} from './utils';
-
-import tmplAnchor from './template/anchor';
+import sprintf from 'zero-fmt/sprintf';
+import templateHelper from './templateHelper';
 import tmplExpander from './template/expander';
 import tmplLink from './template/link';
 import tmplLinkList from './template/link-list';
 
-const DEFAULT_OPTIONS = {
-    anchorIdPrefix: 'toc-',
-    expanderClassName: 'link-expander',
-    expanderExpandedText: '&blacktriangledown;',
-    expanderText: '&blacktriangleright;',
-    hasChildClassName: 'has-child',
-    maxDepth: 3,
-    textClassName: 'link-text',
-    uniqueIdSeparator: '-',
-    uniqueIdSuffix: '1',
-};
+import {
+    DEFAULT_OPTIONS
+} from './const';
 
 const extend = lang.extend;
 const body = document.body;
-const templateHelper = extend({}, htmlUtils, lang);
 
 function addHeaderExpander(header, options) {
     if (!header._expanderElement) {
@@ -54,47 +37,23 @@ function toggleHeaderExpanderText(header, options, isExpanded) {
     header._expanderElement.innerHTML = isExpanded ? options.expanderExpandedText : options.expanderText;
 }
 
-function locationCallback(e) {
-    let delegateTarget = e.delegateTarget;
-    let uniqueId = domData.get(delegateTarget, 'unique');
-    lang.global.location = '#' + uniqueId;
-}
-
 let Toc = declare({
-    constructor(element, options) {
+    constructor(links, options) {
         let me = this;
-        if (element) {
-            element = domQuery.one(element);
-        }
 
         eventFn(me);
-        me._srcElement = element || body;
         me._options = extend({}, DEFAULT_OPTIONS, options);
-        me._parse()
-            ._bindEvents();
+        me._render(links);
+        me._bindEvents();
         return me;
     },
 
-    _parse() {
+    _render(links) {
         let me = this;
         let options = me._options;
         let tocElement = me._outerDomNode = domConstruct.toDom(tmplLinkList({}, templateHelper));
-
-        let headers = domQuery.all(getHeaderSelector(options.maxDepth), me._srcElement);
         let currentHeaderMeta;
         let headerMetaById = {};
-
-        function getHeaderUniqueId(text) {
-            let id = text
-                .replace(/\s+/g, options.uniqueIdSeparator)
-                .replace(/\\/g, options.uniqueIdSeparator)
-                .replace(/\//g, options.uniqueIdSeparator);
-            if (!lang.hasKey(headerMetaById, id)) {
-                return id;
-            }
-
-            return getHeaderUniqueId(id + options.uniqueIdSuffix);
-        }
 
         function addToChildren(headerMeta, parentHeaderMeta) {
             let childrenElement = domQuery.one('ul', parentHeaderMeta.element);
@@ -110,25 +69,10 @@ let Toc = declare({
             addHeaderExpander(parentHeaderMeta, options);
         }
 
-        lang.each(headers, function (header) {
-            let level = getHeaderLevel(header);
-            let text = getHeaderText(header);
-            let uniqueId = getHeaderUniqueId(text);
-            let meta = {
-                text,
-                uniqueId,
-                level,
-                isExpanded: true,
-                expanderClassName: options.expanderClassName,
-                textClassName: options.textClassName,
-                children: [],
-            };
+        lang.each(links, function (meta) {
+            let level = meta.level;
             let linkElement = domConstruct.toDom(tmplLink(meta, templateHelper));
-            let anchorElement = domConstruct.toDom(tmplAnchor(meta, templateHelper));
             meta.element = linkElement;
-            meta.anchorElement = anchorElement;
-            domConstruct.place(anchorElement, header, 'first'); // add anchor to header
-
             if (currentHeaderMeta) {
                 if (currentHeaderMeta.level < level) { // NOTICE that "h2 < h1"
                     meta.parentId = currentHeaderMeta.uniqueId;
@@ -152,9 +96,8 @@ let Toc = declare({
             } else {
                 domConstruct.place(linkElement, tocElement);
             }
-
-            headerMetaById[uniqueId] = meta;
             currentHeaderMeta = meta;
+            headerMetaById[meta.uniqueId] = meta;
         });
 
         lang.forIn(headerMetaById, function (meta) {
@@ -164,33 +107,39 @@ let Toc = declare({
         });
 
         me._headerMetaById = headerMetaById;
+
         return me;
     },
 
     _bindEvents() {
         let me = this;
         let options = me._options;
+
         domEvent.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
             let delegateTarget = e.delegateTarget;
             let uniqueId = domData.get(delegateTarget, 'unique');
+            var headerMeta = me._headerMetaById[uniqueId];
             me.expandOrCollapse(uniqueId);
+            if (headerMeta.isExpanded) {
+                me.trigger('expanded', headerMeta);
+            } else {
+                me.trigger('collapsed', headerMeta);
+            }
         });
 
         domEvent.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
             let delegateTarget = e.delegateTarget;
             let uniqueId = domData.get(delegateTarget, 'unique');
             me.scrollTo(uniqueId);
-            me.trigger('scrolled-to', me._headerMetaById[uniqueId]);
+            me.trigger('clicked', me._headerMetaById[uniqueId]);
         });
-
-        domEvent.on(me._srcElement, 'click', '.toc-anchor', locationCallback);
 
         return me;
     },
 
     _unbindEvents() {
         let me = this;
-        domEvent.off(me._srcElement, 'click', locationCallback);
+        me.trigger('unbind-events');
         return me;
     },
 
@@ -256,15 +205,10 @@ let Toc = declare({
 
     destroy() {
         let me = this;
-        let options = me._options;
 
         // unbind all events
         me._unbindEvents();
 
-        // remove all dom nodes
-        lang.each(domQuery.all('.toc-anchor', me._srcElement), function (anchor) {
-            domConstruct.destroy(anchor);
-        });
 
         domConstruct.destroy(me._outerDomNode);
         return me;
