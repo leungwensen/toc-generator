@@ -3,6 +3,12 @@
  */
 var gulp = require('gulp');
 
+gulp.task('template', [
+    'ztpl'
+], function (done) {
+    done();
+});
+
 gulp.task('build', [
     'pack'
 ], function (done) {
@@ -11,6 +17,7 @@ gulp.task('build', [
 
 gulp.task('default', [
     'build',
+    'watch',
     'dev'
 ], function (done) {
     done();
