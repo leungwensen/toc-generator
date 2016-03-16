@@ -45,6 +45,15 @@ module.exports = {
     plugins: [
         new ExtractTextPlugin('[name].css')
     ],
-    devtool: 'source-map'
+    devtool: 'source-map',
+    devServer: {
+        stats: {
+            cached: false,
+            exclude: [
+                /node_modules[\\\/]/
+            ],
+            colors: true
+        }
+    }
 };
 

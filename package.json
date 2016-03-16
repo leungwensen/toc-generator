@@ -36,6 +36,8 @@
         "gulp-less": "^3.0.5",
         "gulp-rename": "^1.2.2",
         "gulp-util": "^3.0.7",
+        "gulp-watch": "^4.3.5",
+        "gulp-ztpl-compiler": "^0.0.20160310",
         "less-loader": "^2.2.2",
         "marked-plus-renderer": "^0.0.20160222",
         "require-dir": "^0.3.0",
