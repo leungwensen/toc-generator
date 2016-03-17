@@ -4173,10 +4173,10 @@
 	
 	    function getHeaderUniqueId(text) {
 	        var id = text.replace(/\s+/g, options.uniqueIdSeparator).replace(/\\/g, options.uniqueIdSeparator).replace(/\//g, options.uniqueIdSeparator);
-	        if (!_zeroLang2.default.hasKey(headerMetaById, id)) {
-	            return options.uniqueIdPrefix + id;
+	        var resultId = options.uniqueIdPrefix + id;
+	        if (!_zeroLang2.default.hasKey(headerMetaById, resultId)) {
+	            return resultId;
 	        }
-	
 	        return getHeaderUniqueId(id + options.uniqueIdSuffix);
 	    }
 	
@@ -4188,7 +4188,6 @@
 	            text: text,
 	            uniqueId: uniqueId,
 	            level: level
-	
 	        };
 	        var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, _templateHelper2.default));
 	        meta.anchorElement = anchorElement;
