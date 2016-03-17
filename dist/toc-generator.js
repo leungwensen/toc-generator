@@ -58,24 +58,24 @@
 	
 	var _toc2 = _interopRequireDefault(_toc);
 	
-	var _utils = __webpack_require__(22);
+	var _generate = __webpack_require__(27);
+	
+	var _generate2 = _interopRequireDefault(_generate);
+	
+	var _utils = __webpack_require__(29);
 	
 	var _utils2 = _interopRequireDefault(_utils);
 	
-	var _object = __webpack_require__(9);
+	var _object = __webpack_require__(5);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	/**
-	 * Created by liangwensen on 2/17/16.
-	 */
-	
 	var main = (0, _object.extend)({
 	    Toc: _toc2.default,
-	    generate: function generate(element, options) {
-	        return new _toc2.default(element, options);
-	    }
-	}, _utils2.default);
+	    generate: _generate2.default
+	}, _utils2.default); /**
+	                      * Created by liangwensen on 2/17/16.
+	                      */
 	
 	_global2.default.tg = _global2.default.tocGenerator = main;
 	
@@ -107,90 +107,71 @@
 	    value: true
 	});
 	
-	var _event = __webpack_require__(3);
-	
-	var _event2 = _interopRequireDefault(_event);
-	
-	var _declare = __webpack_require__(7);
+	var _declare = __webpack_require__(3);
 	
 	var _declare2 = _interopRequireDefault(_declare);
 	
-	var _class = __webpack_require__(12);
+	var _class = __webpack_require__(11);
 	
 	var _class2 = _interopRequireDefault(_class);
 	
-	var _construct = __webpack_require__(15);
+	var _construct = __webpack_require__(14);
 	
 	var _construct2 = _interopRequireDefault(_construct);
 	
-	var _data = __webpack_require__(17);
+	var _data = __webpack_require__(16);
 	
 	var _data2 = _interopRequireDefault(_data);
 	
-	var _event3 = __webpack_require__(18);
+	var _event = __webpack_require__(17);
 	
-	var _event4 = _interopRequireDefault(_event3);
+	var _event2 = _interopRequireDefault(_event);
 	
-	var _query = __webpack_require__(13);
+	var _query = __webpack_require__(12);
 	
 	var _query2 = _interopRequireDefault(_query);
 	
-	var _style = __webpack_require__(19);
+	var _style = __webpack_require__(18);
 	
 	var _style2 = _interopRequireDefault(_style);
+	
+	var _event3 = __webpack_require__(19);
+	
+	var _event4 = _interopRequireDefault(_event3);
+	
+	var _zeroLang = __webpack_require__(4);
+	
+	var _zeroLang2 = _interopRequireDefault(_zeroLang);
 	
 	var _sprintf = __webpack_require__(20);
 	
 	var _sprintf2 = _interopRequireDefault(_sprintf);
 	
-	var _zeroLang = __webpack_require__(8);
+	var _templateHelper = __webpack_require__(21);
 	
-	var _zeroLang2 = _interopRequireDefault(_zeroLang);
+	var _templateHelper2 = _interopRequireDefault(_templateHelper);
 	
-	var _html = __webpack_require__(21);
-	
-	var _html2 = _interopRequireDefault(_html);
-	
-	var _utils = __webpack_require__(22);
-	
-	var _anchor = __webpack_require__(23);
-	
-	var _anchor2 = _interopRequireDefault(_anchor);
-	
-	var _expander = __webpack_require__(24);
+	var _expander = __webpack_require__(23);
 	
 	var _expander2 = _interopRequireDefault(_expander);
 	
-	var _link = __webpack_require__(25);
+	var _link = __webpack_require__(24);
 	
 	var _link2 = _interopRequireDefault(_link);
 	
-	var _linkList = __webpack_require__(26);
+	var _linkList = __webpack_require__(25);
 	
 	var _linkList2 = _interopRequireDefault(_linkList);
 	
+	var _const = __webpack_require__(26);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	/**
-	 * Created by liangwensen on 2/17/16.
-	 */
+	var extend = _zeroLang2.default.extend; /**
+	                                         * Created by liangwensen on 2/17/16.
+	                                         */
 	
-	
-	var DEFAULT_OPTIONS = {
-	    anchorIdPrefix: 'toc-',
-	    expanderClassName: 'link-expander',
-	    expanderExpandedText: '&blacktriangledown;',
-	    expanderText: '&blacktriangleright;',
-	    hasChildClassName: 'has-child',
-	    maxDepth: 3,
-	    textClassName: 'link-text',
-	    uniqueIdSeparator: '-',
-	    uniqueIdSuffix: '1'
-	};
-	
-	var extend = _zeroLang2.default.extend;
 	var body = document.body;
-	var templateHelper = extend({}, _html2.default, _zeroLang2.default);
 	
 	function addHeaderExpander(header, options) {
 	    if (!header._expanderElement) {
@@ -206,47 +187,28 @@
 	    header._expanderElement.innerHTML = isExpanded ? options.expanderExpandedText : options.expanderText;
 	}
 	
-	function locationCallback(e) {
-	    var delegateTarget = e.delegateTarget;
-	    var uniqueId = _data2.default.get(delegateTarget, 'unique');
-	    _zeroLang2.default.global.location = '#' + uniqueId;
-	}
-	
 	var Toc = (0, _declare2.default)({
-	    constructor: function constructor(element, options) {
+	    constructor: function constructor(links, options) {
 	        var me = this;
-	        if (element) {
-	            element = _query2.default.one(element);
-	        }
 	
-	        (0, _event2.default)(me);
-	        me._srcElement = element || body;
-	        me._options = extend({}, DEFAULT_OPTIONS, options);
-	        me._parse()._bindEvents();
+	        (0, _event4.default)(me);
+	        me._options = extend({}, _const.DEFAULT_OPTIONS, options);
+	        me._render(links);
+	        me._bindEvents();
+	        me._srcElement = options.srcElement || body;
 	        return me;
 	    },
-	    _parse: function _parse() {
+	    _render: function _render(links) {
 	        var me = this;
 	        var options = me._options;
-	        var tocElement = me._outerDomNode = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
-	
-	        var headers = _query2.default.all((0, _utils.getHeaderSelector)(options.maxDepth), me._srcElement);
+	        var tocElement = me._outerDomNode = _construct2.default.toDom((0, _linkList2.default)({}, _templateHelper2.default));
 	        var currentHeaderMeta = undefined;
 	        var headerMetaById = {};
-	
-	        function getHeaderUniqueId(text) {
-	            var id = text.replace(/\s+/g, options.uniqueIdSeparator).replace(/\\/g, options.uniqueIdSeparator).replace(/\//g, options.uniqueIdSeparator);
-	            if (!_zeroLang2.default.hasKey(headerMetaById, id)) {
-	                return id;
-	            }
-	
-	            return getHeaderUniqueId(id + options.uniqueIdSuffix);
-	        }
 	
 	        function addToChildren(headerMeta, parentHeaderMeta) {
 	            var childrenElement = _query2.default.one('ul', parentHeaderMeta.element);
 	            if (!childrenElement) {
-	                childrenElement = _construct2.default.toDom((0, _linkList2.default)({}, templateHelper));
+	                childrenElement = _construct2.default.toDom((0, _linkList2.default)({}, _templateHelper2.default));
 	                _construct2.default.place(childrenElement, parentHeaderMeta.element);
 	            }
 	
@@ -257,25 +219,16 @@
 	            addHeaderExpander(parentHeaderMeta, options);
 	        }
 	
-	        _zeroLang2.default.each(headers, function (header) {
-	            var level = (0, _utils.getHeaderLevel)(header);
-	            var text = (0, _utils.getHeaderText)(header);
-	            var uniqueId = getHeaderUniqueId(text);
-	            var meta = {
-	                text: text,
-	                uniqueId: uniqueId,
-	                level: level,
+	        _zeroLang2.default.each(links, function (meta) {
+	            _zeroLang2.default.extend(meta, {
 	                isExpanded: true,
 	                expanderClassName: options.expanderClassName,
 	                textClassName: options.textClassName,
 	                children: []
-	            };
-	            var linkElement = _construct2.default.toDom((0, _link2.default)(meta, templateHelper));
-	            var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, templateHelper));
+	            });
+	            var level = meta.level;
+	            var linkElement = _construct2.default.toDom((0, _link2.default)(meta, _templateHelper2.default));
 	            meta.element = linkElement;
-	            meta.anchorElement = anchorElement;
-	            _construct2.default.place(anchorElement, header, 'first'); // add anchor to header
-	
 	            if (currentHeaderMeta) {
 	                if (currentHeaderMeta.level < level) {
 	                    // NOTICE that "h2 < h1"
@@ -301,8 +254,8 @@
 	                _construct2.default.place(linkElement, tocElement);
 	            }
 	
-	            headerMetaById[uniqueId] = meta;
 	            currentHeaderMeta = meta;
+	            headerMetaById[meta.uniqueId] = meta;
 	        });
 	
 	        _zeroLang2.default.forIn(headerMetaById, function (meta) {
@@ -312,31 +265,37 @@
 	        });
 	
 	        me._headerMetaById = headerMetaById;
+	
 	        return me;
 	    },
 	    _bindEvents: function _bindEvents() {
 	        var me = this;
 	        var options = me._options;
-	        _event4.default.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
+	
+	        _event2.default.on(me._outerDomNode, 'click', '.' + options.expanderClassName, function (e) {
 	            var delegateTarget = e.delegateTarget;
 	            var uniqueId = _data2.default.get(delegateTarget, 'unique');
+	            var headerMeta = me._headerMetaById[uniqueId];
 	            me.expandOrCollapse(uniqueId);
+	            if (headerMeta.isExpanded) {
+	                me.trigger('expanded', headerMeta);
+	            } else {
+	                me.trigger('collapsed', headerMeta);
+	            }
 	        });
 	
-	        _event4.default.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
+	        _event2.default.on(me._outerDomNode, 'click', '.' + options.textClassName, function (e) {
 	            var delegateTarget = e.delegateTarget;
 	            var uniqueId = _data2.default.get(delegateTarget, 'unique');
 	            me.scrollTo(uniqueId);
-	            me.trigger('scrolled-to', me._headerMetaById[uniqueId]);
+	            me.trigger('clicked', me._headerMetaById[uniqueId]);
 	        });
-	
-	        _event4.default.on(me._srcElement, 'click', '.toc-anchor', locationCallback);
 	
 	        return me;
 	    },
 	    _unbindEvents: function _unbindEvents() {
 	        var me = this;
-	        _event4.default.off(me._srcElement, 'click', locationCallback);
+	        me.trigger('unbind-events');
 	        return me;
 	    },
 	    expand: function expand(id) {
@@ -372,7 +331,7 @@
 	    },
 	    scrollTo: function scrollTo(uniqueId) {
 	        var me = this;
-	        var anchorSelector = (0, _sprintf2.default)('[data-unique="%s"]', uniqueId);
+	        var anchorSelector = (0, _sprintf2.default)('.toc-anchor[data-unique="%s"]', uniqueId);
 	        try {
 	            var anchorNode = _query2.default.one(anchorSelector, me._srcElement);
 	            if (anchorNode) {
@@ -395,15 +354,9 @@
 	    },
 	    destroy: function destroy() {
 	        var me = this;
-	        var options = me._options;
 	
 	        // unbind all events
 	        me._unbindEvents();
-	
-	        // remove all dom nodes
-	        _zeroLang2.default.each(_query2.default.all('.toc-anchor', me._srcElement), function (anchor) {
-	            _construct2.default.destroy(anchor);
-	        });
 	
 	        _construct2.default.destroy(me._outerDomNode);
 	        return me;
@@ -420,73 +373,270 @@
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	// TODO NEED to strengthen
+	var lang = __webpack_require__(4);
+	var c3mroMerge = __webpack_require__(10);
 	
-	var arrayUtils = __webpack_require__(4);
+	module.exports = function () /*name, superClasses, protoObj*/{
+	    var uberClass = undefined;
+	    var tempConstructor = undefined;
+	    var lin = '_linearization';
+	    var args = lang.toArray(arguments);
+	    var name = lang.isString(args[0]) ? args.shift() : '';
+	    var superClasses = args.length > 1 ? args.shift() : [];
+	    var protoObj = args[0] ? args.shift() : {};
+	    var bases = [];
+	    var hasCtor = false;
+	    var Tmp = function Tmp() {};
+	    var ctor = function ctor() {};
 	
-	var event = function event(target) {
-	    // if target not defined, it is a global event
-	    target = target || this;
+	    superClasses = lang.isArray(superClasses) ? superClasses : [superClasses];
+	    lang.each(superClasses, function (clazz) {
+	        clazz[lin] = clazz[lin] || [clazz];
+	        bases.push(clazz[lin]);
+	    });
 	
-	    // all events stores in the the collection: *._events
-	    var events = target._events = {};
+	    if (bases.length) {
+	        bases.push(superClasses);
+	        bases = c3mroMerge.apply(null, bases);
+	    }
 	
-	    target.on = function (name, callback, context) {
-	        /*
-	         * @description: 绑定事件
-	         */
-	        var list = events[name] || (events[name] = []);
-	        list.push({
-	            callback: callback,
-	            context: context
-	        });
-	        return target;
-	    };
-	    target.off = function (name, callback) {
-	        /*
-	         * @description: 解绑事件
-	         */
-	        if (!name) {
-	            events = {};
-	            return target;
+	    tempConstructor = protoObj.constructor;
+	    if (tempConstructor !== Object.prototype.constructor) {
+	        hasCtor = true;
+	        ctor = tempConstructor;
+	    }
+	
+	    ctor[lin] = [ctor].concat(bases);
+	    ctor.parents = lang.toArray(bases);
+	
+	    protoObj.constructor = ctor;
+	    while (uberClass = bases.shift()) {
+	        protoObj = lang.extend({}, uberClass.prototype, protoObj);
+	        Tmp.prototype = protoObj;
+	        if (!hasCtor) {
+	            protoObj.constructor = ctor;
 	        }
-	        var list = events[name] || [];
-	        var i = list.length;
-	        if (!callback) {
-	            list = [];
-	        } else {
-	            while (i > 0) {
-	                i--;
-	                if (list[i].callback === callback) {
-	                    list.splice(i, 1);
-	                }
-	            }
-	        }
-	        events[name] = list;
-	        return target;
-	    };
-	    target.emit = function () {
-	        /*
-	         * @description: 触发事件
-	         */
-	        var args = arrayUtils.toArray(arguments);
-	        var list = events[args.shift()] || [];
-	        arrayUtils.each(list, function (evt) {
-	            if (!evt.callback) {
-	                throw 'event callback is not defined';
-	            }
-	            evt.callback.apply(evt.context, args);
-	        });
-	        return target;
-	    };
-	    target.trigger = target.emit; // alias
-	    return target;
+	        protoObj = new Tmp();
+	    }
+	
+	    ctor.className = name;
+	    ctor.prototype = protoObj;
+	    ctor.prototype.constructor = ctor;
+	
+	    return ctor;
 	};
-	
-	module.exports = event;
 
 /***/ },
 /* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint esnext: true, loopfunc: true */
+	
+	var objectUtils = __webpack_require__(5);
+	
+	module.exports = objectUtils.extend({
+	        global: __webpack_require__(1)
+	}, objectUtils, __webpack_require__(7), __webpack_require__(8), __webpack_require__(9), __webpack_require__(6));
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	
+	var checkType = __webpack_require__(6);
+	var getType = checkType.getType;
+	var isFunction = checkType.isFunction;
+	var isObject = checkType.isObject;
+	var isPlainObject = checkType.isPlainObject;
+	
+	var arrayUtils = __webpack_require__(7);
+	var contains = arrayUtils.contains;
+	var each = arrayUtils.each;
+	var isArrayLike = arrayUtils.isArrayLike;
+	var toArray = arrayUtils.toArray;
+	
+	function toPlainObject(obj) {
+	    return isPlainObject(obj) ? obj : {};
+	}
+	function forIn(obj, callback, thisObj) {
+	    var plainObj = toPlainObject(obj);
+	    for (var key in plainObj) {
+	        callback.call(thisObj, plainObj[key], key, obj);
+	    }
+	}
+	
+	var keys = Object.keys ? function (obj) {
+	    return Object.keys(obj);
+	} : function (obj) {
+	    var result = [];
+	    forIn(obj, function (value, key) {
+	        if (!(isFunction(obj) && key === 'prototype')) {
+	            result.push(key);
+	        }
+	    });
+	    return result;
+	};
+	
+	function values(obj) {
+	    var result = [];
+	    forIn(obj, function (value) {
+	        return result.push(value);
+	    });
+	    return result;
+	}
+	
+	function extend(dest) {
+	    dest = dest || {};
+	    each(toArray(arguments).slice(1), function (source) {
+	        if (source) {
+	            for (var prop in source) {
+	                dest[prop] = source[prop];
+	            }
+	        }
+	    });
+	    return dest;
+	}
+	
+	function merge(dest) {
+	    dest = dest || {};
+	    each(toArray(arguments).slice(1), function (source) {
+	        for (var prop in source) {
+	            if (getType(source[prop]) !== getType(dest[prop])) {
+	                if (isPlainObject(source[prop])) {
+	                    dest[prop] = {};
+	                    merge(dest[prop], source[prop]);
+	                } else {
+	                    dest[prop] = source[prop];
+	                }
+	            } else {
+	                if (isPlainObject(source[prop])) {
+	                    merge(dest[prop], source[prop]);
+	                } else {
+	                    dest[prop] = source[prop];
+	                }
+	            }
+	        }
+	    });
+	    return dest;
+	}
+	
+	var objectUtils = {
+	    assign: extend,
+	    forIn: forIn,
+	    extend: extend,
+	    hasKey: function hasKey(obj, key) {
+	        return obj.hasOwnProperty(key);
+	    },
+	    hasValue: function hasValue(obj, value) {
+	        return contains(values(obj), value);
+	    },
+	    isObject: isObject,
+	    isPlainObject: isPlainObject,
+	    keys: keys,
+	    merge: merge,
+	    values: values,
+	    invert: function invert(obj) {
+	        var result = {};
+	        forIn(obj, function (value, key) {
+	            result[value] = key;
+	        });
+	        return result;
+	    },
+	    clone: function clone(obj) {
+	        if (isArrayLike(obj)) {
+	            return toArray(obj);
+	        }
+	        if (isPlainObject(obj)) {
+	            return merge({}, obj);
+	        }
+	        return obj;
+	    },
+	    destroy: function destroy(obj) {
+	        for (var p in obj) {
+	            delete obj[p];
+	        }
+	        obj.prototype = null;
+	        obj = null;
+	    }
+	};
+	
+	module.exports = objectUtils;
+
+/***/ },
+/* 6 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+	
+	/* jshint esnext: true, loopfunc: true */
+	
+	var toString = ({}).toString;
+	var isType = function isType(obj, type) {
+	    return toString.call(obj) === '[object ' + type + ']';
+	};
+	
+	var checkType = {
+	    isArguments: function isArguments(obj) {
+	        return isType(obj, 'Arguments');
+	    },
+	    isArray: Array.isArray ? Array.isArray : function (obj) {
+	        return isType(obj, 'Array');
+	    },
+	    isArrayLike: function isArrayLike(obj) {
+	        return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && isFinite(obj.length);
+	    },
+	    isBoolean: function isBoolean(obj) {
+	        return isType(obj, 'Boolean');
+	    },
+	    isDate: function isDate(obj) {
+	        return isType(obj, 'Date');
+	    },
+	    isError: function isError(obj) {
+	        return isType(obj, 'Error');
+	    },
+	    isFunction: function isFunction(obj) {
+	        return isType(obj, 'Function');
+	    },
+	    isNull: function isNull(obj) {
+	        return obj === null;
+	    },
+	    isNumber: function isNumber(obj) {
+	        return isType(obj, 'Number');
+	    },
+	    isPlainObject: function isPlainObject(obj) {
+	        return isType(obj, 'Object');
+	    },
+	    isRegExp: function isRegExp(obj) {
+	        return isType(obj, 'RegExp');
+	    },
+	    isString: function isString(obj) {
+	        return isType(obj, 'String');
+	    },
+	    isType: isType,
+	    isUndefined: function isUndefined(obj) {
+	        return obj === undefined;
+	    },
+	    getType: function getType(obj) {
+	        var typeStr = toString.call(obj);
+	        return typeStr.replace(/^\[object /, '').replace(/\]$/, '');
+	    },
+	    isObject: function isObject(obj) {
+	        var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
+	        return type === 'function' || type === 'object' && !!obj;
+	    }
+	};
+	
+	module.exports = checkType;
+
+/***/ },
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -495,8 +645,8 @@
 	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var checkType = __webpack_require__(5);
-	var numberUtils = __webpack_require__(6);
+	var checkType = __webpack_require__(6);
+	var numberUtils = __webpack_require__(8);
 	
 	var isArray = checkType.isArray;
 	var AP = Array.prototype;
@@ -753,82 +903,14 @@
 	module.exports = arrayUtils;
 
 /***/ },
-/* 5 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
-	
-	/* jshint esnext: true, loopfunc: true */
-	
-	var toString = ({}).toString;
-	var isType = function isType(obj, type) {
-	    return toString.call(obj) === '[object ' + type + ']';
-	};
-	
-	var checkType = {
-	    isArguments: function isArguments(obj) {
-	        return isType(obj, 'Arguments');
-	    },
-	    isArray: Array.isArray ? Array.isArray : function (obj) {
-	        return isType(obj, 'Array');
-	    },
-	    isArrayLike: function isArrayLike(obj) {
-	        return (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && isFinite(obj.length);
-	    },
-	    isBoolean: function isBoolean(obj) {
-	        return isType(obj, 'Boolean');
-	    },
-	    isDate: function isDate(obj) {
-	        return isType(obj, 'Date');
-	    },
-	    isError: function isError(obj) {
-	        return isType(obj, 'Error');
-	    },
-	    isFunction: function isFunction(obj) {
-	        return isType(obj, 'Function');
-	    },
-	    isNull: function isNull(obj) {
-	        return obj === null;
-	    },
-	    isNumber: function isNumber(obj) {
-	        return isType(obj, 'Number');
-	    },
-	    isPlainObject: function isPlainObject(obj) {
-	        return isType(obj, 'Object');
-	    },
-	    isRegExp: function isRegExp(obj) {
-	        return isType(obj, 'RegExp');
-	    },
-	    isString: function isString(obj) {
-	        return isType(obj, 'String');
-	    },
-	    isType: isType,
-	    isUndefined: function isUndefined(obj) {
-	        return obj === undefined;
-	    },
-	    getType: function getType(obj) {
-	        var typeStr = toString.call(obj);
-	        return typeStr.replace(/^\[object /, '').replace(/\]$/, '');
-	    },
-	    isObject: function isObject(obj) {
-	        var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
-	        return type === 'function' || type === 'object' && !!obj;
-	    }
-	};
-	
-	module.exports = checkType;
-
-/***/ },
-/* 6 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var checkType = __webpack_require__(5);
+	var checkType = __webpack_require__(6);
 	
 	var isNumber = checkType.isNumber;
 	var nativeMin = Math.min;
@@ -881,216 +963,14 @@
 	module.exports = numberUtils;
 
 /***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
-	
-	var lang = __webpack_require__(8);
-	var c3mroMerge = __webpack_require__(11);
-	
-	module.exports = function () /*name, superClasses, protoObj*/{
-	    var uberClass = undefined;
-	    var tempConstructor = undefined;
-	    var lin = '_linearization';
-	    var args = lang.toArray(arguments);
-	    var name = lang.isString(args[0]) ? args.shift() : '';
-	    var superClasses = args.length > 1 ? args.shift() : [];
-	    var protoObj = args[0] ? args.shift() : {};
-	    var bases = [];
-	    var hasCtor = false;
-	    var Tmp = function Tmp() {};
-	    var ctor = function ctor() {};
-	
-	    superClasses = lang.isArray(superClasses) ? superClasses : [superClasses];
-	    lang.each(superClasses, function (clazz) {
-	        clazz[lin] = clazz[lin] || [clazz];
-	        bases.push(clazz[lin]);
-	    });
-	
-	    if (bases.length) {
-	        bases.push(superClasses);
-	        bases = c3mroMerge.apply(null, bases);
-	    }
-	
-	    tempConstructor = protoObj.constructor;
-	    if (tempConstructor !== Object.prototype.constructor) {
-	        hasCtor = true;
-	        ctor = tempConstructor;
-	    }
-	
-	    ctor[lin] = [ctor].concat(bases);
-	    ctor.parents = lang.toArray(bases);
-	
-	    protoObj.constructor = ctor;
-	    while (uberClass = bases.shift()) {
-	        protoObj = lang.extend({}, uberClass.prototype, protoObj);
-	        Tmp.prototype = protoObj;
-	        if (!hasCtor) {
-	            protoObj.constructor = ctor;
-	        }
-	        protoObj = new Tmp();
-	    }
-	
-	    ctor.className = name;
-	    ctor.prototype = protoObj;
-	    ctor.prototype.constructor = ctor;
-	
-	    return ctor;
-	};
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	/* jshint esnext: true, loopfunc: true */
-	
-	var objectUtils = __webpack_require__(9);
-	
-	module.exports = objectUtils.extend({
-	        global: __webpack_require__(1)
-	}, objectUtils, __webpack_require__(4), __webpack_require__(6), __webpack_require__(10), __webpack_require__(5));
-
-/***/ },
 /* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
-	
-	var checkType = __webpack_require__(5);
-	var getType = checkType.getType;
-	var isFunction = checkType.isFunction;
-	var isObject = checkType.isObject;
-	var isPlainObject = checkType.isPlainObject;
-	
-	var arrayUtils = __webpack_require__(4);
-	var contains = arrayUtils.contains;
-	var each = arrayUtils.each;
-	var isArrayLike = arrayUtils.isArrayLike;
-	var toArray = arrayUtils.toArray;
-	
-	function toPlainObject(obj) {
-	    return isPlainObject(obj) ? obj : {};
-	}
-	function forIn(obj, callback, thisObj) {
-	    var plainObj = toPlainObject(obj);
-	    for (var key in plainObj) {
-	        callback.call(thisObj, plainObj[key], key, obj);
-	    }
-	}
-	
-	var keys = Object.keys ? function (obj) {
-	    return Object.keys(obj);
-	} : function (obj) {
-	    var result = [];
-	    forIn(obj, function (value, key) {
-	        if (!(isFunction(obj) && key === 'prototype')) {
-	            result.push(key);
-	        }
-	    });
-	    return result;
-	};
-	
-	function values(obj) {
-	    var result = [];
-	    forIn(obj, function (value) {
-	        return result.push(value);
-	    });
-	    return result;
-	}
-	
-	function extend(dest) {
-	    dest = dest || {};
-	    each(toArray(arguments).slice(1), function (source) {
-	        if (source) {
-	            for (var prop in source) {
-	                dest[prop] = source[prop];
-	            }
-	        }
-	    });
-	    return dest;
-	}
-	
-	function merge(dest) {
-	    dest = dest || {};
-	    each(toArray(arguments).slice(1), function (source) {
-	        for (var prop in source) {
-	            if (getType(source[prop]) !== getType(dest[prop])) {
-	                if (isPlainObject(source[prop])) {
-	                    dest[prop] = {};
-	                    merge(dest[prop], source[prop]);
-	                } else {
-	                    dest[prop] = source[prop];
-	                }
-	            } else {
-	                if (isPlainObject(source[prop])) {
-	                    merge(dest[prop], source[prop]);
-	                } else {
-	                    dest[prop] = source[prop];
-	                }
-	            }
-	        }
-	    });
-	    return dest;
-	}
-	
-	var objectUtils = {
-	    assign: extend,
-	    forIn: forIn,
-	    extend: extend,
-	    hasKey: function hasKey(obj, key) {
-	        return obj.hasOwnProperty(key);
-	    },
-	    hasValue: function hasValue(obj, value) {
-	        return contains(values(obj), value);
-	    },
-	    isObject: isObject,
-	    isPlainObject: isPlainObject,
-	    keys: keys,
-	    merge: merge,
-	    values: values,
-	    invert: function invert(obj) {
-	        var result = {};
-	        forIn(obj, function (value, key) {
-	            result[value] = key;
-	        });
-	        return result;
-	    },
-	    clone: function clone(obj) {
-	        if (isArrayLike(obj)) {
-	            return toArray(obj);
-	        }
-	        if (isPlainObject(obj)) {
-	            return merge({}, obj);
-	        }
-	        return obj;
-	    },
-	    destroy: function destroy(obj) {
-	        for (var p in obj) {
-	            delete obj[p];
-	        }
-	        obj.prototype = null;
-	        obj = null;
-	    }
-	};
-	
-	module.exports = objectUtils;
-
-/***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
 	/* jshint esnext: true, loopfunc: true */
 	
-	var checkType = __webpack_require__(5);
+	var checkType = __webpack_require__(6);
 	
 	var isString = checkType.isString;
 	var stringPrototype = String.prototype;
@@ -1127,14 +1007,14 @@
 	module.exports = stringUtils;
 
 /***/ },
-/* 11 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	
-	var arrayUtils = __webpack_require__(4);
+	var arrayUtils = __webpack_require__(7);
 	
 	function isGoodHead(head, rest) {
 	    var isGood = true;
@@ -1185,7 +1065,7 @@
 	};
 
 /***/ },
-/* 12 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1198,10 +1078,10 @@
 	 * @note: if ClassList is supported, use ClassList
 	 */
 	
-	var domQuery = __webpack_require__(13);
-	var domUtils = __webpack_require__(14);
-	var arrayUtils = __webpack_require__(4);
-	var stringUtils = __webpack_require__(10);
+	var domQuery = __webpack_require__(12);
+	var domUtils = __webpack_require__(13);
+	var arrayUtils = __webpack_require__(7);
+	var stringUtils = __webpack_require__(9);
 	
 	var RE_spaces = /\s+/;
 	var className = 'className';
@@ -1312,7 +1192,7 @@
 	module.exports = domClass;
 
 /***/ },
-/* 13 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1320,17 +1200,17 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global document, window */
 	
-	var arrayUtils = __webpack_require__(4);
+	var arrayUtils = __webpack_require__(7);
 	var isArrayLike = arrayUtils.isArrayLike;
 	var contains = arrayUtils.contains;
 	var toArray = arrayUtils.toArray;
 	var some = arrayUtils.some;
 	var flatten = arrayUtils.flatten;
 	
-	var checkType = __webpack_require__(5);
+	var checkType = __webpack_require__(6);
 	var isString = checkType.isString;
 	
-	var domUtils = __webpack_require__(14);
+	var domUtils = __webpack_require__(13);
 	var testDiv = domUtils.testDiv;
 	var isDomNode = domUtils.isDomNode;
 	
@@ -1434,7 +1314,7 @@
 	};
 
 /***/ },
-/* 14 */
+/* 13 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1444,7 +1324,7 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global document, window */
 	
-	var stringUtils = __webpack_require__(10);
+	var stringUtils = __webpack_require__(9);
 	
 	var doc = document;
 	var html = doc.documentElement;
@@ -1470,7 +1350,7 @@
 	};
 
 /***/ },
-/* 15 */
+/* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1484,13 +1364,13 @@
 	 * @reference   : https://github.com/dojo/dojo/blob/master/dom-construct.js
 	 */
 	
-	var bomUtils = __webpack_require__(16);
-	var arrayUtils = __webpack_require__(4);
-	var objectUtils = __webpack_require__(9);
-	var stringUtils = __webpack_require__(10);
-	var checkType = __webpack_require__(5);
+	var bomUtils = __webpack_require__(15);
+	var arrayUtils = __webpack_require__(7);
+	var objectUtils = __webpack_require__(5);
+	var stringUtils = __webpack_require__(9);
+	var checkType = __webpack_require__(6);
 	
-	var domQuery = __webpack_require__(13);
+	var domQuery = __webpack_require__(12);
 	
 	var queryOne = domQuery.one;
 	var win = window;
@@ -1662,7 +1542,7 @@
 	module.exports = domConstruct;
 
 /***/ },
-/* 16 */
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1670,7 +1550,7 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/* global window, location, navigator, ActiveXObject */
 	
-	var lang = __webpack_require__(8);
+	var lang = __webpack_require__(4);
 	
 	/*
 	 * @author      : 绝云 (wensen.lws@alibaba-inc.com)
@@ -1811,7 +1691,7 @@
 	};
 
 /***/ },
-/* 17 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1819,8 +1699,8 @@
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	///* global */
 	
-	var domUtils = __webpack_require__(14);
-	var domQuery = __webpack_require__(13);
+	var domUtils = __webpack_require__(13);
+	var domQuery = __webpack_require__(12);
 	
 	var queryOne = domQuery.one;
 	
@@ -1871,7 +1751,7 @@
 	module.exports = dataset;
 
 /***/ },
-/* 18 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1885,9 +1765,9 @@
 	 * @reference: http://dean.edwards.name/weblog/2005/10/add-event/
 	 */
 	
-	var checkType = __webpack_require__(5);
-	var domQuery = __webpack_require__(13);
-	var domUtils = __webpack_require__(14);
+	var checkType = __webpack_require__(6);
+	var domQuery = __webpack_require__(12);
+	var domUtils = __webpack_require__(13);
 	
 	var doc = document;
 	var win = window;
@@ -2015,7 +1895,7 @@
 	};
 
 /***/ },
-/* 19 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2027,13 +1907,13 @@
 	 * @author: 绝云（wensen.lws）
 	 * @description: dom style
 	 */
-	var arrayUtils = __webpack_require__(4);
-	var stringUtils = __webpack_require__(10);
-	var bomUtils = __webpack_require__(16);
+	var arrayUtils = __webpack_require__(7);
+	var stringUtils = __webpack_require__(9);
+	var bomUtils = __webpack_require__(15);
 	
-	var domData = __webpack_require__(17);
-	var domUtils = __webpack_require__(14);
-	var domQuery = __webpack_require__(13);
+	var domData = __webpack_require__(16);
+	var domUtils = __webpack_require__(13);
+	var domQuery = __webpack_require__(12);
 	
 	var ieVersion = bomUtils.versions.msie || 0;
 	var astr = 'DXImageTransform.Microsoft.Alpha';
@@ -2305,6 +2185,79 @@
 	module.exports = domStyle;
 
 /***/ },
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
+	
+	// TODO NEED to strengthen
+	
+	var arrayUtils = __webpack_require__(7);
+	
+	var event = function event(target) {
+	    // if target not defined, it is a global event
+	    target = target || this;
+	
+	    // all events stores in the the collection: *._events
+	    var events = target._events = {};
+	
+	    target.on = function (name, callback, context) {
+	        /*
+	         * @description: 绑定事件
+	         */
+	        var list = events[name] || (events[name] = []);
+	        list.push({
+	            callback: callback,
+	            context: context
+	        });
+	        return target;
+	    };
+	    target.off = function (name, callback) {
+	        /*
+	         * @description: 解绑事件
+	         */
+	        if (!name) {
+	            events = {};
+	            return target;
+	        }
+	        var list = events[name] || [];
+	        var i = list.length;
+	        if (!callback) {
+	            list = [];
+	        } else {
+	            while (i > 0) {
+	                i--;
+	                if (list[i].callback === callback) {
+	                    list.splice(i, 1);
+	                }
+	            }
+	        }
+	        events[name] = list;
+	        return target;
+	    };
+	    target.emit = function () {
+	        /*
+	         * @description: 触发事件
+	         */
+	        var args = arrayUtils.toArray(arguments);
+	        var list = events[args.shift()] || [];
+	        arrayUtils.each(list, function (evt) {
+	            if (!evt.callback) {
+	                throw 'event callback is not defined';
+	            }
+	            evt.callback.apply(evt.context, args);
+	        });
+	        return target;
+	    };
+	    target.trigger = target.emit; // alias
+	    return target;
+	};
+	
+	module.exports = event;
+
+/***/ },
 /* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -2312,7 +2265,7 @@
 	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true, boss: true */
 	
-	var lang = __webpack_require__(8);
+	var lang = __webpack_require__(4);
 	var abs = Math.abs;
 	
 	module.exports = function (format) {
@@ -2427,13 +2380,41 @@
 
 	'use strict';
 	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _zeroLang = __webpack_require__(4);
+	
+	var _zeroLang2 = _interopRequireDefault(_zeroLang);
+	
+	var _html = __webpack_require__(22);
+	
+	var _html2 = _interopRequireDefault(_html);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	/**
+	 * Created by liangwensen on 3/16/16.
+	 */
+	
+	var templateHelper = _zeroLang2.default.extend({}, _html2.default, _zeroLang2.default);
+	
+	exports.default = templateHelper;
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
 	/* jshint node: true, esnext: true, loopfunc: true, undef: true, unused: true */
 	/*
 	 * @author: 绝云（wensen.lws）
 	 * @description: utils for html
 	 */
 	
-	var objectUtils = __webpack_require__(9);
+	var objectUtils = __webpack_require__(5);
 	
 	var escapeMap = {
 	    '&': '&amp;',
@@ -2467,7 +2448,221 @@
 	};
 
 /***/ },
-/* 22 */
+/* 23 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<span class="' + _e(data.className) + '" data-unique="' + _e(data.uniqueId) + '">&blacktriangledown;</span>';return _s;
+	};
+
+/***/ },
+/* 24 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<li class="toc-link level' + _e(data.level) + '"><span class="' + _e(data.textClassName) + '" data-unique="' + _e(data.uniqueId) + '">' + _e(data.text) + '</span></li>';return _s;
+	};
+
+/***/ },
+/* 25 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<ul class="toc-link-list"></ul>';return _s;
+	};
+
+/***/ },
+/* 26 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	/**
+	 * Created by liangwensen on 3/16/16.
+	 */
+	
+	var DEFAULT_OPTIONS = {
+	    expanderClassName: 'link-expander',
+	    expanderExpandedText: '&blacktriangledown;',
+	    expanderText: '&blacktriangleright;',
+	    hasChildClassName: 'has-child',
+	    maxDepth: 3,
+	    textClassName: 'link-text',
+	    uniqueIdSeparator: '-',
+	    uniqueIdSuffix: '1',
+	    uniqueIdPrefix: '/'
+	};
+	
+	exports.DEFAULT_OPTIONS = DEFAULT_OPTIONS;
+
+/***/ },
+/* 27 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	
+	var _construct = __webpack_require__(14);
+	
+	var _construct2 = _interopRequireDefault(_construct);
+	
+	var _data = __webpack_require__(16);
+	
+	var _data2 = _interopRequireDefault(_data);
+	
+	var _event = __webpack_require__(17);
+	
+	var _event2 = _interopRequireDefault(_event);
+	
+	var _query = __webpack_require__(12);
+	
+	var _query2 = _interopRequireDefault(_query);
+	
+	var _zeroLang = __webpack_require__(4);
+	
+	var _zeroLang2 = _interopRequireDefault(_zeroLang);
+	
+	var _toc = __webpack_require__(2);
+	
+	var _toc2 = _interopRequireDefault(_toc);
+	
+	var _anchor = __webpack_require__(28);
+	
+	var _anchor2 = _interopRequireDefault(_anchor);
+	
+	var _templateHelper = __webpack_require__(21);
+	
+	var _templateHelper2 = _interopRequireDefault(_templateHelper);
+	
+	var _const = __webpack_require__(26);
+	
+	var _utils = __webpack_require__(29);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	/**
+	 * Created by liangwensen on 3/16/16.
+	 */
+	
+	var body = document.body;
+	
+	function locationCallback(e) {
+	    var delegateTarget = e.delegateTarget;
+	    var uniqueId = _data2.default.get(delegateTarget, 'unique');
+	    _zeroLang2.default.global.location = '#' + uniqueId;
+	    delegateTarget.scrollIntoView(true);
+	}
+	
+	function generate(element, options) {
+	    options = _zeroLang2.default.extend({}, _const.DEFAULT_OPTIONS, options);
+	    if (element) {
+	        element = _query2.default.one(element);
+	    }
+	
+	    element = element || body;
+	
+	    var links = [];
+	    var headers = _query2.default.all((0, _utils.getHeaderSelector)(options.maxDepth), element);
+	    var headerMetaById = {};
+	
+	    function getHeaderUniqueId(text) {
+	        var id = text.replace(/\s+/g, options.uniqueIdSeparator).replace(/\\/g, options.uniqueIdSeparator).replace(/\//g, options.uniqueIdSeparator);
+	        var resultId = options.uniqueIdPrefix + id;
+	        if (!_zeroLang2.default.hasKey(headerMetaById, resultId)) {
+	            return resultId;
+	        }
+	
+	        return getHeaderUniqueId(id + options.uniqueIdSuffix);
+	    }
+	
+	    _zeroLang2.default.each(headers, function (header) {
+	        var level = (0, _utils.getHeaderLevel)(header);
+	        var text = (0, _utils.getHeaderText)(header);
+	        var uniqueId = getHeaderUniqueId(text);
+	        var meta = {
+	            text: text,
+	            uniqueId: uniqueId,
+	            level: level
+	        };
+	        var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, _templateHelper2.default));
+	        meta.anchorElement = anchorElement;
+	        _construct2.default.place(anchorElement, header, 'first'); // add anchor to header
+	
+	        headerMetaById[uniqueId] = meta;
+	        links.push(meta);
+	    });
+	
+	    var toc = new _toc2.default(links, _zeroLang2.default.extend({
+	        srcElement: element
+	    }, options));
+	
+	    _event2.default.on(element, 'click', '.toc-anchor', locationCallback);
+	    toc.on('unbind-events', function () {
+	        _event2.default.off(element, 'click', locationCallback);
+	
+	        // remove all dom nodes
+	        _zeroLang2.default.each(_query2.default.all('.toc-anchor', element), function (anchor) {
+	            _construct2.default.destroy(anchor);
+	        });
+	    });
+	
+	    return toc;
+	}
+	
+	exports.default = generate;
+
+/***/ },
+/* 28 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	    value: true
+	});
+	exports.default = anonymous;
+	function anonymous(data, helper
+	/**/) {
+	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
+	        return s;
+	    };var _s = '<span class="toc-anchor" data-unique="' + _e(data.uniqueId) + '" style="font-weight: normal !important;">&#9875;</span>';return _s;
+	};
+
+/***/ },
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -2479,7 +2674,7 @@
 	exports.getHeaderText = getHeaderText;
 	exports.getHeaderSelector = getHeaderSelector;
 	
-	var _number = __webpack_require__(6);
+	var _number = __webpack_require__(8);
 	
 	var _sprintf = __webpack_require__(20);
 	
@@ -2508,74 +2703,6 @@
 	
 	    return headers.join(',');
 	}
-
-/***/ },
-/* 23 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<span class="toc-anchor" data-unique="' + _e(data.uniqueId) + '" style="font-weight: normal !important;">&#9875;</span>';return _s;
-	};
-
-/***/ },
-/* 24 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<span class="' + _e(data.className) + '" data-unique="' + _e(data.uniqueId) + '">&blacktriangledown;</span>';return _s;
-	};
-
-/***/ },
-/* 25 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<li class="toc-link level' + _e(data.level) + '"><span class="' + _e(data.textClassName) + '" data-unique="' + _e(data.uniqueId) + '">' + _e(data.text) + '</span></li>';return _s;
-	};
-
-/***/ },
-/* 26 */
-/***/ function(module, exports) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	    value: true
-	});
-	exports.default = anonymous;
-	function anonymous(data, helper
-	/**/) {
-	    data = data || {};helper = helper || {};var _e = helper.escape ? helper.escape : function (s) {
-	        return s;
-	    };var _s = '<ul class="toc-link-list"></ul>';return _s;
-	};
 
 /***/ }
 /******/ ]);
