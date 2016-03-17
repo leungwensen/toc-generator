@@ -3,7 +3,7 @@
     "title": "toc-generator",
     "description": "table of content generator",
     "homepage": "https://github.com/leungwensen/toc-generator",
-    "version": "0.0.20160224",
+    "version": "0.0.20160317",
     "main": "src/index.js",
     "license": "MIT",
     "author": {
