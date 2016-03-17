@@ -2771,6 +2771,7 @@
 	        me._options = extend({}, _const.DEFAULT_OPTIONS, options);
 	        me._render(links);
 	        me._bindEvents();
+	        me._srcElement = options.srcElement || body;
 	        return me;
 	    },
 	    _render: function _render(links) {
@@ -2795,6 +2796,12 @@
 	        }
 	
 	        _zeroLang2.default.each(links, function (meta) {
+	            _zeroLang2.default.extend(meta, {
+	                isExpanded: true,
+	                expanderClassName: options.expanderClassName,
+	                textClassName: options.textClassName,
+	                children: []
+	            });
 	            var level = meta.level;
 	            var linkElement = _construct2.default.toDom((0, _link2.default)(meta, _templateHelper2.default));
 	            meta.element = linkElement;
@@ -2899,7 +2906,7 @@
 	    },
 	    scrollTo: function scrollTo(uniqueId) {
 	        var me = this;
-	        var anchorSelector = (0, _sprintf2.default)('[data-unique="%s"]', uniqueId);
+	        var anchorSelector = (0, _sprintf2.default)('.toc-anchor[data-unique="%s"]', uniqueId);
 	        try {
 	            var anchorNode = _query2.default.one(anchorSelector, me._srcElement);
 	            if (anchorNode) {
@@ -4106,6 +4113,10 @@
 	
 	var _construct2 = _interopRequireDefault(_construct);
 	
+	var _data = __webpack_require__(30);
+	
+	var _data2 = _interopRequireDefault(_data);
+	
 	var _event = __webpack_require__(1);
 	
 	var _event2 = _interopRequireDefault(_event);
@@ -4136,14 +4147,17 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var body = document.body; /**
-	                           * Created by liangwensen on 3/16/16.
-	                           */
+	/**
+	 * Created by liangwensen on 3/16/16.
+	 */
+	
+	var body = document.body;
 	
 	function locationCallback(e) {
 	    var delegateTarget = e.delegateTarget;
-	    var uniqueId = domData.get(delegateTarget, 'unique');
+	    var uniqueId = _data2.default.get(delegateTarget, 'unique');
 	    _zeroLang2.default.global.location = '#' + uniqueId;
+	    delegateTarget.scrollIntoView(true);
 	}
 	
 	function generate(element, options) {
@@ -4173,11 +4187,8 @@
 	        var meta = {
 	            text: text,
 	            uniqueId: uniqueId,
-	            level: level,
-	            isExpanded: true,
-	            expanderClassName: options.expanderClassName,
-	            textClassName: options.textClassName,
-	            children: []
+	            level: level
+	
 	        };
 	        var anchorElement = _construct2.default.toDom((0, _anchor2.default)(meta, _templateHelper2.default));
 	        meta.anchorElement = anchorElement;
@@ -4187,7 +4198,9 @@
 	        links.push(meta);
 	    });
 	
-	    var toc = new _toc2.default(links, options);
+	    var toc = new _toc2.default(links, _zeroLang2.default.extend({
+	        srcElement: element
+	    }, options));
 	
 	    _event2.default.on(element, 'click', '.toc-anchor', locationCallback);
 	    toc.on('unbind-events', function () {

@@ -3,6 +3,7 @@
  */
 
 import domConstruct from 'zero-dom/construct';
+import domData from 'zero-dom/data';
 import domEvent from 'zero-dom/event';
 import domQuery from 'zero-dom/query';
 import lang from 'zero-lang';
@@ -25,6 +26,7 @@ function locationCallback(e) {
     let delegateTarget = e.delegateTarget;
     let uniqueId = domData.get(delegateTarget, 'unique');
     lang.global.location = '#' + uniqueId;
+    delegateTarget.scrollIntoView(true);
 }
 
 function generate(element, options) {
@@ -58,10 +60,7 @@ function generate(element, options) {
             text,
             uniqueId,
             level,
-            isExpanded: true,
-            expanderClassName: options.expanderClassName,
-            textClassName: options.textClassName,
-            children: [],
+
         };
         let anchorElement = domConstruct.toDom(tmplAnchor(meta, templateHelper));
         meta.anchorElement = anchorElement;
@@ -71,7 +70,9 @@ function generate(element, options) {
         links.push(meta);
     });
 
-    let toc = new Toc(links, options);
+    let toc = new Toc(links, lang.extend({
+        srcElement: element
+    }, options));
 
     domEvent.on(element, 'click', '.toc-anchor', locationCallback);
     toc.on('unbind-events', function () {

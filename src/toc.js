@@ -45,6 +45,7 @@ let Toc = declare({
         me._options = extend({}, DEFAULT_OPTIONS, options);
         me._render(links);
         me._bindEvents();
+        me._srcElement = options.srcElement || body;
         return me;
     },
 
@@ -70,6 +71,12 @@ let Toc = declare({
         }
 
         lang.each(links, function (meta) {
+            lang.extend(meta, {
+                isExpanded: true,
+                expanderClassName: options.expanderClassName,
+                textClassName: options.textClassName,
+                children: [],
+            });
             let level = meta.level;
             let linkElement = domConstruct.toDom(tmplLink(meta, templateHelper));
             meta.element = linkElement;
@@ -179,7 +186,7 @@ let Toc = declare({
 
     scrollTo(uniqueId) {
         let me = this;
-        let anchorSelector = sprintf('[data-unique="%s"]', uniqueId);
+        let anchorSelector = sprintf('.toc-anchor[data-unique="%s"]', uniqueId);
         try {
             let anchorNode = domQuery.one(anchorSelector, me._srcElement);
             if (anchorNode) {
@@ -208,7 +215,6 @@ let Toc = declare({
 
         // unbind all events
         me._unbindEvents();
-
 
         domConstruct.destroy(me._outerDomNode);
         return me;
