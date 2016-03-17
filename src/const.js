@@ -16,5 +16,5 @@ const DEFAULT_OPTIONS = {
 
 export {
     DEFAULT_OPTIONS,
-}
+};
 

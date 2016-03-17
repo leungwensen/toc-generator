@@ -34,6 +34,7 @@ function generate(element, options) {
     if (element) {
         element = domQuery.one(element);
     }
+
     element = element || body;
 
     let links = [];
@@ -45,8 +46,9 @@ function generate(element, options) {
             .replace(/\s+/g, options.uniqueIdSeparator)
             .replace(/\\/g, options.uniqueIdSeparator)
             .replace(/\//g, options.uniqueIdSeparator);
-        if (!lang.hasKey(headerMetaById, id)) {
-            return options.uniqueIdPrefix + id;
+        let resultId = options.uniqueIdPrefix + id;
+        if (!lang.hasKey(headerMetaById, resultId)) {
+            return resultId;
         }
 
         return getHeaderUniqueId(id + options.uniqueIdSuffix);
@@ -60,7 +62,6 @@ function generate(element, options) {
             text,
             uniqueId,
             level,
-
         };
         let anchorElement = domConstruct.toDom(tmplAnchor(meta, templateHelper));
         meta.anchorElement = anchorElement;
@@ -71,12 +72,13 @@ function generate(element, options) {
     });
 
     let toc = new Toc(links, lang.extend({
-        srcElement: element
+        srcElement: element,
     }, options));
 
     domEvent.on(element, 'click', '.toc-anchor', locationCallback);
     toc.on('unbind-events', function () {
         domEvent.off(element, 'click', locationCallback);
+
         // remove all dom nodes
         lang.each(domQuery.all('.toc-anchor', element), function (anchor) {
             domConstruct.destroy(anchor);

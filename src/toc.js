@@ -103,6 +103,7 @@ let Toc = declare({
             } else {
                 domConstruct.place(linkElement, tocElement);
             }
+
             currentHeaderMeta = meta;
             headerMetaById[meta.uniqueId] = meta;
         });

@@ -14,7 +14,7 @@ import {
 
 let main = extend({
     Toc,
-    generate
+    generate,
 }, utils);
 
 win.tg = win.tocGenerator = main;
