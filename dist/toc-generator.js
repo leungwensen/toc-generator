@@ -195,7 +195,7 @@
 	        me._options = extend({}, _const.DEFAULT_OPTIONS, options);
 	        me._render(links);
 	        me._bindEvents();
-	        me._srcElement = options.srcElement || body;
+	        me._srcElement = me._options.srcElement || body;
 	        return me;
 	    },
 	    _render: function _render(links) {
